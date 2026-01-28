@@ -1,0 +1,194 @@
+<!-- templates/admin_settings.html -->
+{% extends "admin_base.html" %}
+{% block title %}Admin Settings{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">⚙️ Admin Settings</h1>
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-money-check-alt"></i> Payment Settings</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('admin_settings') }}">
+                        <!-- Bank Transfer Settings -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-university"></i> Bank Transfer Details</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Bank Name</label>
+                                        <input type="text" class="form-control" 
+                                               name="setting_bank_name" 
+                                               value="{{ settings.bank_name }}">
+                                        <small class="text-muted">e.g., MAYBANK, CIMB, PUBLIC BANK</small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Account Holder Name</label>
+                                        <input type="text" class="form-control" 
+                                               name="setting_bank_account_name" 
+                                               value="{{ settings.bank_account_name }}">
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Account Number</label>
+                                        <input type="text" class="form-control" 
+                                               name="setting_bank_account_number" 
+                                               value="{{ settings.bank_account_number }}">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Touch 'n Go Settings -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-mobile-alt"></i> Touch 'n Go (TnG) Details</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Phone Number</label>
+                                        <input type="text" class="form-control" 
+                                               name="setting_tng_phone_number" 
+                                               value="{{ settings.tng_phone_number }}">
+                                        <small class="text-muted">Format: +60123456789</small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Account Name</label>
+                                        <input type="text" class="form-control" 
+                                               name="setting_bank_account_name" 
+                                               value="{{ settings.bank_account_name }}" readonly>
+                                        <small class="text-muted">Same as bank account name</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- WhatsApp Settings -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fab fa-whatsapp"></i> WhatsApp Settings</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Admin WhatsApp Number</label>
+                                        <input type="text" class="form-control" 
+                                               name="setting_admin_whatsapp_number" 
+                                               value="{{ settings.admin_whatsapp_number }}">
+                                        <small class="text-muted">For customers to contact you</small>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">WhatsApp Message Template</label>
+                                    <textarea class="form-control" rows="4" 
+                                              name="setting_whatsapp_message">{{ settings.whatsapp_message }}</textarea>
+                                    <small class="text-muted">
+                                        Available variables: {customer_name}, {order_id}, {total_price}, {payment_method}
+                                    </small>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Shipping Notification Template</label>
+                                    <textarea class="form-control" rows="3" 
+                                              name="setting_shipping_message">{{ settings.shipping_message }}</textarea>
+                                    <small class="text-muted">
+                                        Available variables: {customer_name}, {order_id}, {tracking_number}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- General Settings -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-cog"></i> General Settings</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Payment Instructions</label>
+                                    <textarea class="form-control" rows="3" 
+                                              name="setting_payment_instructions">{{ settings.payment_instructions }}</textarea>
+                                    <small class="text-muted">Shown to customers on payment page</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-save"></i> Save All Settings
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Quick Actions -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-bolt"></i> Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('change_password') }}" class="btn btn-warning">
+                            <i class="fas fa-key"></i> Change Password
+                        </a>
+                        <a href="{{ url_for('admin_orders') }}" class="btn btn-secondary">
+                            <i class="fas fa-shopping-cart"></i> View All Orders
+                        </a>
+                        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-success">
+                            <i class="fas fa-tachometer-alt"></i> Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Info -->
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Settings Information</h5>
+                </div>
+                <div class="card-body">
+                    <h6>How it works:</h6>
+                    <ol class="small">
+                        <li>Customer places order</li>
+                        <li>System sends Telegram notification</li>
+                        <li>Admin sends WhatsApp payment link</li>
+                        <li>Customer uploads payment receipt</li>
+                        <li>Admin verifies payment in system</li>
+                        <li>Admin ships order and adds tracking</li>
+                        <li>Customer receives tracking via WhatsApp</li>
+                    </ol>
+                    <hr>
+                    <p class="small text-muted">
+                        <i class="fas fa-exclamation-triangle"></i> Make sure WhatsApp numbers are in international format (+6...)
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card-header h6 {
+    font-size: 1rem;
+    font-weight: 600;
+}
+.form-label {
+    font-weight: 500;
+}
+</style>
+{% endblock %}

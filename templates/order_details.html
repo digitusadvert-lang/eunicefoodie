@@ -1,0 +1,82 @@
+<!-- templates/order_details.html -->
+{% extends "admin_base.html" %}
+{% block title %}Order Details - Admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>📦 Order Details: {{ order.order_id }}</h1>
+    <a href="{{ url_for('admin_orders') }}" class="btn btn-secondary">← Back to Orders</a>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Order Items</h5>
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Price</th>
+                            <th>Quantity</th>
+                            <th>Weight</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr>
+                            <td>{{ item.product_name }}</td>
+                            <td>RM{{ "%.2f"|format(item.price) }}</td>
+                            <td>{{ item.quantity }}</td>
+                            <td>{{ item.weight }}kg</td>
+                            <td>RM{{ "%.2f"|format(item.price * item.quantity) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Order Summary</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Subtotal</span>
+                        <span>RM{{ "%.2f"|format(order.total_price - order.shipping_fee) }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Shipping Fee</span>
+                        <span>RM{{ "%.2f"|format(order.shipping_fee) }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <strong>Total</strong>
+                        <strong>RM{{ "%.2f"|format(order.total_price) }}</strong>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5>Customer Information</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Name:</strong> {{ order.customer_name }}</p>
+                <p><strong>Address:</strong><br>{{ order.address }}</p>
+                <p><strong>Postcode:</strong> {{ order.postcode }}</p>
+                <p><strong>State:</strong> {{ order.state }}</p>
+                <p><strong>Region:</strong> {{ order.region|title }} Malaysia</p>
+                <p><strong>Order Date:</strong> {{ order.created_at }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

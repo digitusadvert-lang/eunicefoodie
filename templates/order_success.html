@@ -1,0 +1,98 @@
+<!-- templates/order_success.html -->
+{% extends "base.html" %}
+{% block title %}Order Successful{% endblock %}
+
+{% block content %}
+<div class="text-center py-5">
+    <div class="mb-4">
+        <h1 class="display-1 text-success">✓</h1>
+    </div>
+    
+    <h2 class="mb-3">Order Placed Successfully!</h2>
+    <p class="lead mb-4">
+        Thank you for your order. Your order ID is: 
+        <strong class="text-primary">{{ order_id }}</strong>
+    </p>
+    
+    <div class="alert alert-success">
+        <h5>📬 Order Confirmation</h5>
+        <p>We have received your order and our admin has been notified via Telegram.</p>
+        <p>You will receive WhatsApp confirmation from our admin soon.</p>
+    </div>
+    
+    <div class="card mt-4 mb-4 mx-auto" style="max-width: 600px;">
+        <div class="card-body">
+            <h5 class="card-title">Order Details</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Order ID:</strong><br>{{ order_id }}</p>
+                    <p><strong>Customer:</strong><br>{{ customer_name }}</p>
+                    <p><strong>Contact:</strong><br>{{ contact_number }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Shipping Address:</strong><br>
+                       {{ address }}<br>
+                       {{ postcode }} {{ state }}
+                    </p>
+                </div>
+            </div>
+            
+            <hr>
+            <h6>Order Summary:</h6>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th class="text-center">Qty</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in cart_items %}
+                        <tr>
+                            <td>{{ item.name }}</td>
+                            <td class="text-center">{{ item.quantity }}</td>
+                            <td class="text-end">RM{{ "%.2f"|format(item.price * item.quantity) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="2" class="text-end"><strong>Subtotal:</strong></td>
+                            <td class="text-end"><strong>RM{{ "%.2f"|format(subtotal) }}</strong></td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" class="text-end"><strong>Shipping:</strong></td>
+                            <td class="text-end"><strong>RM{{ "%.2f"|format(shipping_fee) }}</strong></td>
+                        </tr>
+                        <tr class="table-primary">
+                            <td colspan="2" class="text-end"><strong>TOTAL:</strong></td>
+                            <td class="text-end"><strong>RM{{ "%.2f"|format(total_price) }}</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="alert alert-info">
+        <h6>📱 What's Next?</h6>
+        <ul class="mb-0">
+            <li>Our admin has been notified via Telegram</li>
+            <li>You will receive WhatsApp confirmation on <strong>{{ contact_number }}</strong></li>
+            <li>We will process your order within 24 hours</li>
+            <li>Please save your order ID: <strong>{{ order_id }}</strong></li>
+        </ul>
+    </div>
+    
+    <div class="mt-4">
+        <a href="{{ url_for('user_products') }}" class="btn btn-primary btn-lg">
+            Continue Shopping
+        </a>
+        <button onclick="window.print()" class="btn btn-outline-secondary btn-lg ms-2">
+            🖨️ Print Receipt
+        </button>
+    </div>
+</div>
+{% endblock %}

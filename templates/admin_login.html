@@ -1,0 +1,40 @@
+<!-- templates/admin_login.html -->
+{% extends "admin_base.html" %}
+{% block title %}Admin Login{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">Admin Login</h4>
+            </div>
+            <div class="card-body">
+                {% if error %}
+                <div class="alert alert-danger">{{ error }}</div>
+                {% endif %}
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="username" 
+                               name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" 
+                               name="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Login</button>
+                </form>
+                <hr>
+                <p class="text-muted small text-center">
+                    Default credentials: admin / admin123
+                </p>
+                <div class="text-center mt-3">
+                    <a href="/" class="btn btn-outline-secondary">← Back to Store</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

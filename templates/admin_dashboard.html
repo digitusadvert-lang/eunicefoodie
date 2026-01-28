@@ -1,0 +1,113 @@
+<!-- templates/admin_dashboard.html -->
+{% extends "admin_base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">👑 Admin Dashboard</h1>
+
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <h5 class="card-title">Total Products</h5>
+                <h2 class="display-4">{{ product_count }}</h2>
+                <a href="{{ url_for('admin_products') }}" class="text-white">Manage Products →</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h5 class="card-title">Total Orders</h5>
+                <h2 class="display-4">{{ order_count }}</h2>
+                <a href="{{ url_for('admin_orders') }}" class="text-white">View Orders →</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <h5 class="card-title">Welcome Back!</h5>
+                <p>{{ session.admin_username }}</p>
+                <p>Last login: Recent</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Recent Orders</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_orders %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Customer</th>
+                                <th>Total</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in recent_orders %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('order_details', order_id=order.order_id) }}">
+                                        {{ order.order_id }}
+                                    </a>
+                                </td>
+                                <td>{{ order.customer_name }}</td>
+                                <td>RM{{ "%.2f"|format(order.total_price) }}</td>
+                                <td>{{ order.created_at[:10] }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No recent orders</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <a href="{{ url_for('add_product') }}" class="btn btn-primary w-100">
+                            ➕ Add Product
+                        </a>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <a href="{{ url_for('admin_products') }}" class="btn btn-info w-100">
+                            🛍️ Manage Products
+                        </a>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <a href="{{ url_for('admin_orders') }}" class="btn btn-success w-100">
+                            📋 View Orders
+                        </a>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <a href="/" class="btn btn-outline-primary w-100" target="_blank">
+                            👁️ View Store
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

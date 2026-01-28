@@ -1,0 +1,51 @@
+<!-- templates/admin_orders.html -->
+{% extends "admin_base.html" %}
+{% block title %}Manage Orders - Admin{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">📋 Manage Orders</h1>
+
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Order ID</th>
+                <th>Customer</th>
+                <th>Items</th>
+                <th>Total (RM)</th>
+                <th>Shipping</th>
+                <th>State</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+            <tr>
+                <td>{{ order.order_id }}</td>
+                <td>{{ order.customer_name }}</td>
+                <td>{{ order.item_count }}</td>
+                <td>RM{{ "%.2f"|format(order.total_price) }}</td>
+                <td>RM{{ "%.2f"|format(order.shipping_fee) }}</td>
+                <td>{{ order.state }}</td>
+                <td>{{ order.created_at[:10] }}</td>
+                <td>
+                    <span class="badge bg-{{ 'success' if order.status == 'completed' else 'warning' }}">
+                        {{ order.status }}
+                    </span>
+                </td>
+                <td>
+                    <a href="{{ url_for('order_details', order_id=order.order_id) }}" 
+                       class="btn btn-sm btn-info">View</a>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="9" class="text-center">No orders found</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

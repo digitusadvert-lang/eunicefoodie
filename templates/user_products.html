@@ -1,0 +1,215 @@
+<!-- templates/user_products.html -->
+{% extends "base.html" %}
+{% block title %}Products - Store{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">🛍️ Our Products</h1>
+
+<form method="POST" action="{{ url_for('add_to_cart') }}" id="orderForm">
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th width="5%">Rank</th>
+                    <th width="40%">Product Name</th>
+                    <th width="15%">Price (RM)</th>
+                    <th width="15%">Weight (kg)</th>
+                    <th width="10%">Sold</th>
+                    <th width="15%">Quantity</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for product in products %}
+                <tr>
+                    <td>
+                        {% if product.total_sold > 0 %}
+                            <span class="badge {% if product.rank == 1 %}bg-danger{% elif product.rank == 2 %}bg-warning text-dark{% elif product.rank == 3 %}bg-primary{% else %}bg-secondary{% endif %}">
+                                {{ product.rank }}
+                            </span>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <strong>{{ product.name }}</strong>
+                        {% if product.rank <= 3 and product.total_sold > 0 %}
+                            <span class="badge ms-2 {% if product.rank == 1 %}bg-danger{% elif product.rank == 2 %}bg-warning text-dark{% else %}bg-primary{% endif %}">
+                                {% if product.rank == 1 %}🔥 Top Seller{% elif product.rank == 2 %}🥈 Popular{% else %}⭐ Hot{% endif %}
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td>RM{{ "%.2f"|format(product.price) }}</td>
+                    <td>{{ product.weight }}</td>
+                    <td>
+                        {% if product.total_sold > 0 %}
+                            <span class="badge bg-success">{{ product.total_sold }}</span>
+                        {% else %}
+                            <span class="badge bg-secondary">New</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <input type="number" 
+                               name="quantity_{{ product.id }}" 
+                               class="form-control form-control-sm quantity-input" 
+                               value="0" 
+                               min="0" 
+                               max="99"
+                               style="width: 80px;"
+                               data-product-id="{{ product.id }}"
+                               data-product-name="{{ product.name }}"
+                               data-price="{{ product.price }}">
+                        <small class="text-muted">Enter 0 to skip</small>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center">
+                        <div class="alert alert-info">
+                            No products available at the moment.
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Order Summary Card (Initially Hidden) -->
+    <div class="card mt-4" id="orderSummary" style="display: none;">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">📋 Selected Items Summary</h5>
+        </div>
+        <div class="card-body">
+            <div id="selectedItemsList"></div>
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <h6>Total Quantity: <span id="totalQty">0</span> items</h6>
+                </div>
+                <div class="col-md-6 text-end">
+                    <h6>Total Amount: RM<span id="totalAmount">0.00</span></h6>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Proceed to Checkout Button -->
+    <div class="card mt-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="mb-0">🛒 Proceed to Checkout</h5>
+                    <small class="text-muted">Fill quantities and proceed to checkout</small>
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg" id="proceedToCheckoutBtn" disabled>
+                    Proceed to Checkout →
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div class="alert alert-info mt-4">
+    <h6>ℹ️ How to Order:</h6>
+    <ol class="mb-0">
+        <li>Enter quantity (1 or more) for products you want to order</li>
+        <li>Leave as 0 for products you don't want</li>
+        <li>Review the order summary that appears</li>
+        <li>Click "Proceed to Checkout →" button at the bottom</li>
+        <li>Enter your shipping details and confirm order</li>
+    </ol>
+    <hr>
+    <p class="mb-0">
+        <i class="fas fa-lightbulb"></i> <strong>Tip:</strong> Products are ranked by sales. Top sellers are marked with 
+        <span class="badge bg-danger">🔥 Top Seller</span> badges!
+    </p>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const quantityInputs = document.querySelectorAll('.quantity-input');
+    const orderSummary = document.getElementById('orderSummary');
+    const selectedItemsList = document.getElementById('selectedItemsList');
+    const totalQty = document.getElementById('totalQty');
+    const totalAmount = document.getElementById('totalAmount');
+    const proceedToCheckoutBtn = document.getElementById('proceedToCheckoutBtn');
+    
+    function updateOrderSummary() {
+        let items = [];
+        let totalQuantity = 0;
+        let totalPrice = 0;
+        
+        quantityInputs.forEach(input => {
+            const qty = parseInt(input.value) || 0;
+            if (qty > 0) {
+                const productId = input.dataset.productId;
+                const productName = input.dataset.productName;
+                const price = parseFloat(input.dataset.price);
+                const itemTotal = price * qty;
+                
+                items.push({
+                    id: productId,
+                    name: productName,
+                    price: price,
+                    quantity: qty,
+                    total: itemTotal
+                });
+                
+                totalQuantity += qty;
+                totalPrice += itemTotal;
+            }
+        });
+        
+        // Update summary display
+        if (items.length > 0) {
+            let html = '<div class="table-responsive"><table class="table table-sm">';
+            html += '<thead><tr><th>Product</th><th class="text-center">Qty</th><th class="text-end">Price</th><th class="text-end">Total</th></tr></thead>';
+            html += '<tbody>';
+            
+            // Sort items by quantity (highest first)
+            items.sort((a, b) => b.quantity - a.quantity);
+            
+            items.forEach(item => {
+                html += `<tr>
+                    <td>${item.name}</td>
+                    <td class="text-center">${item.quantity}</td>
+                    <td class="text-end">RM${item.price.toFixed(2)}</td>
+                    <td class="text-end">RM${item.total.toFixed(2)}</td>
+                </tr>`;
+            });
+            
+            html += '</tbody></table></div>';
+            selectedItemsList.innerHTML = html;
+            orderSummary.style.display = 'block';
+            totalQty.textContent = totalQuantity;
+            totalAmount.textContent = totalPrice.toFixed(2);
+            proceedToCheckoutBtn.disabled = false;
+            proceedToCheckoutBtn.innerHTML = `Proceed to Checkout (${totalQuantity} items) →`;
+        } else {
+            orderSummary.style.display = 'none';
+            proceedToCheckoutBtn.disabled = true;
+            proceedToCheckoutBtn.innerHTML = 'Proceed to Checkout →';
+        }
+    }
+    
+    // Add event listeners to all quantity inputs
+    quantityInputs.forEach(input => {
+        input.addEventListener('change', updateOrderSummary);
+        input.addEventListener('input', updateOrderSummary);
+    });
+    
+    // Form validation to prevent empty submission
+    document.getElementById('orderForm').addEventListener('submit', function(e) {
+        const totalQuantity = parseInt(totalQty.textContent) || 0;
+        if (totalQuantity === 0) {
+            e.preventDefault();
+            alert('Please select at least one item to proceed to checkout.');
+            return false;
+        }
+        return true;
+    });
+    
+    // Initial update
+    updateOrderSummary();
+});
+</script>
+{% endblock %}

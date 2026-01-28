@@ -1,0 +1,460 @@
+<!-- templates/user_checkout.html -->
+{% extends "base.html" %}
+{% block title %}Checkout{% endblock %}
+
+{% block content %}
+<!-- Progress Indicator -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="text-center">
+                <div class="rounded-circle bg-success text-white p-3 d-inline-flex mb-2">
+                    1
+                </div>
+                <p class="mb-0"><strong>Add Items</strong></p>
+                <small>Select quantities</small>
+            </div>
+            <div class="flex-grow-1">
+                <hr class="my-0 mx-2" style="border-top: 2px solid #28a745;">
+            </div>
+            <div class="text-center">
+                <div class="rounded-circle bg-primary text-white p-3 d-inline-flex mb-2">
+                    2
+                </div>
+                <p class="mb-0"><strong>Reserve Order</strong></p>
+                <small>Enter shipping details</small>
+            </div>
+            <div class="flex-grow-1">
+                <hr class="my-0 mx-2" style="border-top: 2px solid #dee2e6;">
+            </div>
+            <div class="text-center">
+                <div class="rounded-circle bg-secondary text-white p-3 d-inline-flex mb-2">
+                    3
+                </div>
+                <p class="mb-0">Make Payment</p>
+                <small>Admin will contact you</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Page Header with Back Button -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <a href="{{ url_for('user_products') }}" class="btn btn-outline-secondary">
+        ← Back to Products
+    </a>
+    <h1 class="mb-0">📍 Reserve Your Order</h1>
+    <div class="invisible">←</div> <!-- Empty div for spacing -->
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">📝 Shipping Information</h5>
+            </div>
+            <div class="card-body">
+                {% if error %}
+                <div class="alert alert-danger">{{ error }}</div>
+                {% endif %}
+                
+                <form method="POST">
+                    <!-- Personal Information -->
+                    <div class="card mb-4 border-0 bg-light">
+                        <div class="card-body">
+                            <h6 class="card-title mb-3">👤 Personal Information</h6>
+                            <div class="mb-3">
+                                <label for="customer_name" class="form-label">Full Name *</label>
+                                <input type="text" class="form-control" id="customer_name" 
+                                       name="customer_name" required value="{{ request.form.customer_name if request.form }}">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="contact_number" class="form-label">Contact Number *</label>
+                                <input type="tel" class="form-control" id="contact_number" 
+                                       name="contact_number" required 
+                                       pattern="[0-9]{10,11}"
+                                       placeholder="e.g., 0123456789"
+                                       value="{{ request.form.contact_number if request.form }}">
+                                <small class="text-muted">Enter your WhatsApp number (10-11 digits) - Admin will contact you here</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Shipping Address -->
+                    <div class="card mb-4 border-0 bg-light">
+                        <div class="card-body">
+                            <h6 class="card-title mb-3">🏠 Shipping Address</h6>
+                            <div class="mb-3">
+                                <label for="address" class="form-label">Delivery Address *</label>
+                                <textarea class="form-control" id="address" name="address" 
+                                          rows="3" required placeholder="House no, Street, Area">{{ request.form.address if request.form }}</textarea>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="postcode" class="form-label">Postcode *</label>
+                                    <input type="text" class="form-control" id="postcode" 
+                                           name="postcode" required pattern="[0-9]{5}" 
+                                           title="Enter a 5-digit postcode"
+                                           value="{{ request.form.postcode if request.form }}">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="state" class="form-label">State *</label>
+                                    <select class="form-select" id="state" name="state" required>
+                                        <option value="">Select State</option>
+                                        {% for state in states %}
+                                        <option value="{{ state }}" 
+                                                {% if request.form and request.form.state == state %}selected{% endif %}>
+                                            {{ state }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="alert alert-info" id="shippingInfo">
+                                Shipping fee will be calculated based on your state selection
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Important Note -->
+                    <div class="alert alert-warning">
+                        <h6><i class="fas fa-info-circle"></i> Reservation Process</h6>
+                        <p class="mb-0">
+                            <strong>This is a reservation only.</strong> After you submit this form, our admin will contact you via WhatsApp within 24 hours to arrange payment and finalize your order.
+                        </p>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{{ url_for('user_products') }}" class="btn btn-secondary">
+                            ← Back to Products
+                        </a>
+                        <button type="submit" class="btn btn-success btn-lg">
+                            Reserve Order Now →
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Shipping Information Card -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">🚚 Shipping Information</h5>
+            </div>
+            <div class="card-body">
+                <h6>Shipping Rates:</h6>
+                <ul class="mb-0">
+                    <li><strong>West Malaysia:</strong> RM7.00</li>
+                    <li><strong>East Malaysia:</strong> RM15.00</li>
+                </ul>
+                <hr>
+                <small class="text-muted">
+                    <strong>West Malaysia States:</strong> Johor, Kedah, Kelantan, Melaka, Negeri Sembilan, 
+                    Pahang, Penang, Perak, Perlis, Selangor, Terengganu
+                    <br><br>
+                    <strong>East Malaysia States:</strong> Sabah, Sarawak, Labuan
+                </small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">📋 Order Summary</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th class="text-center">Qty</th>
+                                <th class="text-end">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in cart_items %}
+                            <tr>
+                                <td>{{ item.name }}</td>
+                                <td class="text-center">{{ item.quantity }}</td>
+                                <td class="text-end">RM{{ "%.2f"|format(item.price * item.quantity) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-group-divider">
+                                <td colspan="2" class="text-end"><strong>Subtotal:</strong></td>
+                                <td class="text-end"><strong>RM{{ "%.2f"|format(subtotal) }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td colspan="2" class="text-end"><strong>Shipping:</strong></td>
+                                <td class="text-end" id="shippingFee">-</td>
+                            </tr>
+                            <tr class="table-primary">
+                                <td colspan="2" class="text-end"><strong>TOTAL:</strong></td>
+                                <td class="text-end" id="totalPrice"><strong>RM{{ "%.2f"|format(subtotal) }}</strong></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                
+                <div class="alert alert-light mt-3">
+                    <h6>📦 Order Details:</h6>
+                    <p class="mb-1"><strong>Total Items:</strong> {{ cart_items|sum(attribute='quantity') }}</p>
+                    <p class="mb-1"><strong>Products:</strong> {{ cart_items|length }}</p>
+                    <p class="mb-0"><strong>Subtotal:</strong> RM{{ "%.2f"|format(subtotal) }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Process Information -->
+        <div class="card mb-4">
+            <div class="card-header bg-warning">
+                <h5 class="mb-0">📋 Reservation Process</h5>
+            </div>
+            <div class="card-body">
+                <ol class="mb-0 small">
+                    <li>Complete this form with your details</li>
+                    <li>Click "Reserve Order Now"</li>
+                    <li>You'll see reservation confirmation</li>
+                    <li>Admin contacts you within 24 hours</li>
+                    <li>Admin sends payment link via WhatsApp</li>
+                    <li>You make payment & upload receipt</li>
+                    <li>Admin verifies and ships your order</li>
+                    <li>You receive tracking number</li>
+                </ol>
+            </div>
+        </div>
+        
+        <!-- Contact Information -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">📱 Contact Information</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-2"><strong>WhatsApp Support:</strong></p>
+                <p class="mb-0 text-muted small">
+                    Our admin will contact you on the WhatsApp number you provide within 24 hours.
+                </p>
+                <hr>
+                <p class="mb-0 text-muted small">
+                    <strong>Note:</strong> Please ensure your contact number is correct and WhatsApp is active.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const stateSelect = document.getElementById('state');
+    const shippingInfo = document.getElementById('shippingInfo');
+    const shippingFee = document.getElementById('shippingFee');
+    const totalPrice = document.getElementById('totalPrice');
+    const subtotal = {{ subtotal }};
+    
+    // Define state regions
+    const westStates = ['Johor', 'Kedah', 'Kelantan', 'Melaka', 'Negeri Sembilan', 
+                       'Pahang', 'Penang', 'Perak', 'Perlis', 'Selangor', 'Terengganu'];
+    const eastStates = ['Sabah', 'Sarawak', 'Labuan'];
+    
+    // Shipping calculation
+    function calculateShipping(state) {
+        let fee = 0;
+        let region = '';
+        
+        if (westStates.includes(state)) {
+            fee = 7.00;
+            region = 'West Malaysia';
+        } else if (eastStates.includes(state)) {
+            fee = 15.00;
+            region = 'East Malaysia';
+        }
+        
+        return { fee, region };
+    }
+    
+    function updateShippingDisplay() {
+        const state = stateSelect.value;
+        const { fee, region } = calculateShipping(state);
+        const total = subtotal + fee;
+        
+        if (fee > 0) {
+            shippingInfo.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <div class="me-2">🚚</div>
+                    <div>
+                        <strong>Shipping to ${state} (${region})</strong><br>
+                        Shipping Fee: <strong>RM${fee.toFixed(2)}</strong>
+                    </div>
+                </div>
+            `;
+            shippingFee.innerHTML = `<strong>RM${fee.toFixed(2)}</strong>`;
+            totalPrice.innerHTML = `<strong>RM${total.toFixed(2)}</strong>`;
+        } else if (state) {
+            shippingInfo.innerHTML = '<div class="text-danger">⚠️ Please select a valid state</div>';
+            shippingFee.textContent = '-';
+            totalPrice.innerHTML = `<strong>RM${subtotal.toFixed(2)}</strong>`;
+        } else {
+            shippingInfo.textContent = 'Please select a state';
+            shippingFee.textContent = '-';
+            totalPrice.innerHTML = `<strong>RM${subtotal.toFixed(2)}</strong>`;
+        }
+    }
+    
+    // Form validation
+    function setupFormValidation() {
+        // Contact number validation
+        const contactInput = document.getElementById('contact_number');
+        contactInput.addEventListener('input', function() {
+            const value = this.value.replace(/\D/g, '');
+            this.value = value;
+            
+            if (value.length >= 10 && value.length <= 11) {
+                this.classList.remove('is-invalid');
+                this.classList.add('is-valid');
+            } else {
+                this.classList.remove('is-valid');
+                if (value.length > 0) {
+                    this.classList.add('is-invalid');
+                }
+            }
+        });
+        
+        // Postcode validation
+        const postcodeInput = document.getElementById('postcode');
+        postcodeInput.addEventListener('input', function() {
+            const value = this.value.replace(/\D/g, '');
+            this.value = value;
+            
+            if (value.length === 5) {
+                this.classList.remove('is-invalid');
+                this.classList.add('is-valid');
+            } else {
+                this.classList.remove('is-valid');
+                if (value.length > 0) {
+                    this.classList.add('is-invalid');
+                }
+            }
+        });
+    }
+    
+    // Progress indicator update
+    function updateProgressIndicator() {
+        const currentStep = 2; // Shipping Details is step 2
+        const steps = document.querySelectorAll('.rounded-circle');
+        const lines = document.querySelectorAll('.flex-grow-1 hr');
+        
+        steps.forEach((step, index) => {
+            if (index < currentStep - 1) {
+                // Previous steps - green
+                step.classList.remove('bg-secondary', 'bg-primary');
+                step.classList.add('bg-success');
+                if (lines[index]) {
+                    lines[index].style.borderTop = '2px solid #28a745';
+                }
+            } else if (index === currentStep - 1) {
+                // Current step - primary color
+                step.classList.remove('bg-success', 'bg-secondary');
+                step.classList.add('bg-primary');
+                if (lines[index]) {
+                    lines[index].style.borderTop = '2px solid #dee2e6';
+                }
+            } else {
+                // Future steps - grey
+                step.classList.remove('bg-success', 'bg-primary');
+                step.classList.add('bg-secondary');
+                if (lines[index]) {
+                    lines[index].style.borderTop = '2px solid #dee2e6';
+                }
+            }
+        });
+    }
+    
+    // Event listeners
+    stateSelect.addEventListener('change', updateShippingDisplay);
+    
+    // Initialize
+    updateShippingDisplay();
+    setupFormValidation();
+    updateProgressIndicator();
+    
+    // Form validation before submit
+    document.querySelector('form').addEventListener('submit', function(e) {
+        let isValid = true;
+        
+        // Check required fields
+        const requiredFields = ['customer_name', 'contact_number', 'address', 'postcode', 'state'];
+        requiredFields.forEach(fieldName => {
+            const field = document.querySelector(`[name="${fieldName}"]`);
+            if (!field.value.trim()) {
+                field.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                field.classList.remove('is-invalid');
+            }
+        });
+        
+        // Additional validation for contact number
+        const contactNumber = document.getElementById('contact_number').value;
+        if (!/^\d{10,11}$/.test(contactNumber)) {
+            document.getElementById('contact_number').classList.add('is-invalid');
+            isValid = false;
+        }
+        
+        // Additional validation for postcode
+        const postcode = document.getElementById('postcode').value;
+        if (!/^\d{5}$/.test(postcode)) {
+            document.getElementById('postcode').classList.add('is-invalid');
+            isValid = false;
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert('Please fill in all required fields correctly.');
+        }
+    });
+});
+</script>
+
+<style>
+.rounded-circle {
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.flex-grow-1 hr {
+    height: 2px;
+    margin-top: 24px;
+}
+
+.card.bg-light {
+    background-color: #f8f9fa !important;
+}
+
+@media (max-width: 768px) {
+    .rounded-circle {
+        width: 40px;
+        height: 40px;
+        font-size: 0.9rem;
+    }
+    
+    h1 {
+        font-size: 1.5rem;
+    }
+    
+    .btn-lg {
+        padding: 0.5rem 1rem;
+        font-size: 1rem;
+    }
+}
+</style>
+{% endblock %}
