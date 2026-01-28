@@ -1,33 +1,91 @@
 <!-- templates/payment_not_found.html -->
-{% extends "base.html" %}
-{% block title %}Payment Link Not Found{% endblock %}
-
-{% block content %}
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-6">
-            <div class="card border-danger">
-                <div class="card-header bg-danger text-white">
-                    <h4 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Payment Link Not Found</h4>
-                </div>
-                <div class="card-body text-center">
-                    <div class="display-1 text-danger mb-3">
-                        <i class="fas fa-link-slash"></i>
-                    </div>
-                    <h3>Invalid Payment Link</h3>
-                    <p class="lead">Order ID: <strong>{{ order_id }}</strong> not found.</p>
-                    
-                    <div class="alert alert-info">
-                        <p>This payment link is invalid or has expired.</p>
-                        <p class="mb-0">Please contact admin for a new payment link.</p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Not Found</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-6">
+                <div class="card border-warning shadow-lg">
+                    <div class="card-header bg-warning text-dark text-center py-4">
+                        <div class="display-1 mb-3">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <h1 class="card-title">Order Not Found</h1>
                     </div>
                     
-                    <a href="{{ url_for('user_products') }}" class="btn btn-primary mt-3">
-                        <i class="fas fa-store"></i> Back to Store
-                    </a>
+                    <div class="card-body text-center py-4">
+                        <div class="mb-4">
+                            <h3>Order ID: {{ order_id }}</h3>
+                            <p class="lead">We couldn't find an order with this ID.</p>
+                        </div>
+                        
+                        <div class="alert alert-info mb-4">
+                            <h5><i class="fas fa-question-circle"></i> What Could Have Happened?</h5>
+                            <ul class="text-start mb-0">
+                                <li>The order ID might be incorrect</li>
+                                <li>The order might have been deleted</li>
+                                <li>You might have copied the wrong link</li>
+                                <li>The order might have expired</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h5>What to Do:</h5>
+                            <ol class="text-start">
+                                <li>Double-check the Order ID in your confirmation email/message</li>
+                                <li>Contact the seller/admin for assistance</li>
+                                <li>Make sure you're using the correct payment link</li>
+                                <li>If you haven't placed an order yet, start shopping</li>
+                            </ol>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <a href="{{ url_for('user_products') }}" class="btn btn-primary btn-lg">
+                                <i class="fas fa-shopping-bag"></i> Shop Now
+                            </a>
+                            <button class="btn btn-outline-secondary btn-lg" onclick="window.history.back()">
+                                <i class="fas fa-arrow-left"></i> Go Back
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="card-footer text-center bg-light py-3">
+                        <p class="mb-0">
+                            <i class="fas fa-exclamation-circle"></i>
+                            If you believe this is an error, please contact support
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
-{% endblock %}
+
+    <style>
+    .card {
+        border-radius: 15px;
+        overflow: hidden;
+    }
+    
+    .display-1 {
+        font-size: 5rem;
+    }
+    
+    @media (max-width: 768px) {
+        .display-1 {
+            font-size: 3.5rem;
+        }
+        
+        h1 {
+            font-size: 1.8rem;
+        }
+    }
+    </style>
+</body>
+</html>

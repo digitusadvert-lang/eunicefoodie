@@ -7,6 +7,7 @@ import requests
 import os
 from functools import wraps
 import json
+import urllib.parse
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here'
@@ -51,8 +52,7 @@ SHIPPING_RATES = {
 # State to region mapping
 STATE_REGIONS = {
     'west': ['Johor', 'Kedah', 'Kelantan', 'Melaka', 'Negeri Sembilan', 
-             'Pahang', 'Penang', 'Perak', 'Perlis', 'Selangor', 'Terengganu',
-             'Kuala Lumpur'],
+             'Pahang', 'Penang', 'Perak', 'Perlis', 'Selangor', 'Kuala Lumpur', 'Terengganu'],
     'east': ['Sabah', 'Sarawak', 'Labuan']
 }
 
@@ -499,10 +499,10 @@ def payment_page(order_id):
                                  payment_methods=PAYMENT_METHODS,
                                  error="Please select a payment method")
         
-        # Update order with payment method
+        # Safer update without updated_at for now
         g.conn.execute('''
             UPDATE orders 
-            SET payment_method = ?, payment_status = 'pending_verification', updated_at = CURRENT_TIMESTAMP 
+            SET payment_method = ?, payment_status = 'pending_verification'
             WHERE order_id = ?
         ''', (payment_method, order_id))
         
@@ -538,7 +538,8 @@ def payment_page(order_id):
         
         return render_template('payment_submitted.html',
                              order_id=order_id,
-                             customer_name=order['customer_name'])
+                             customer_name=order['customer_name'],
+                             current_time=datetime.now().strftime('%d %b %Y, %I:%M %p'))
     
     return render_template('payment_page.html', 
                          order=order, 
@@ -597,15 +598,30 @@ def admin_dashboard():
     # Get counts for dashboard
     product_count = g.conn.execute('SELECT COUNT(*) FROM products').fetchone()[0]
     order_count = g.conn.execute('SELECT COUNT(*) FROM orders').fetchone()[0]
-    pending_payments = g.conn.execute('SELECT COUNT(*) FROM orders WHERE payment_status = "pending_verification"').fetchone()[0]
     
-    # Get recent orders
+    # Get pending payments (orders with payment_status = 'pending_verification')
+    pending_payments = g.conn.execute(
+        'SELECT COUNT(*) FROM orders WHERE payment_status = "pending_verification"'
+    ).fetchone()[0]
+    
+    # Get recent orders including payment status
     recent_orders = g.conn.execute('''
-        SELECT * FROM orders ORDER BY created_at DESC LIMIT 5
+        SELECT * FROM orders 
+        ORDER BY created_at DESC 
+        LIMIT 10
+    ''').fetchall()
+    
+    # Get orders awaiting verification
+    orders_to_verify = g.conn.execute('''
+        SELECT * FROM orders 
+        WHERE payment_status = 'pending_verification'
+        ORDER BY created_at DESC
     ''').fetchall()
     
     # Get total revenue
-    total_revenue_result = g.conn.execute('SELECT SUM(total_price) FROM orders WHERE payment_verified = 1').fetchone()
+    total_revenue_result = g.conn.execute(
+        'SELECT SUM(total_price) FROM orders WHERE payment_verified = 1'
+    ).fetchone()
     total_revenue = total_revenue_result[0] if total_revenue_result[0] else 0
     
     return render_template('admin_dashboard.html', 
@@ -613,6 +629,7 @@ def admin_dashboard():
                           order_count=order_count,
                           pending_payments=pending_payments,
                           recent_orders=recent_orders,
+                          orders_to_verify=orders_to_verify,
                           total_revenue=total_revenue)
 
 @app.route('/admin/products')
@@ -743,52 +760,141 @@ def verify_payment(order_id):
     action = request.form.get('action')
     
     if action == 'verify':
-        g.conn.execute('''
-            UPDATE orders 
-            SET payment_verified = 1, 
-                payment_status = 'verified',
-                payment_verified_at = CURRENT_TIMESTAMP,
-                payment_verified_by = ?,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE order_id = ?
-        ''', (session.get('admin_username'), order_id))
-        g.conn.commit()
-        
-        # Send Telegram notification
-        message = f"✅ *PAYMENT VERIFIED*\n\n"
-        message += f"📦 Order ID: {order_id}\n"
-        message += f"👤 Customer: {order['customer_name']}\n"
-        message += f"💵 Amount: RM{order['total_price']:.2f}\n"
-        message += f"👨‍💼 Verified by: {session.get('admin_username')}\n"
-        message += f"⏰ {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-        
-        send_telegram_message(message)
-        
-        return jsonify({'success': True, 'message': 'Payment verified successfully'})
+        try:
+            g.conn.execute('''
+                UPDATE orders 
+                SET payment_verified = 1, 
+                    payment_status = 'verified',
+                    status = 'confirmed',
+                    payment_verified_at = CURRENT_TIMESTAMP,
+                    payment_verified_by = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE order_id = ?
+            ''', (session.get('admin_username', 'admin'), order_id))
+            g.conn.commit()
+            
+            # Generate WhatsApp message for admin to send
+            whatsapp_message = f"Hi {order['customer_name']}, your payment for Order {order_id} has been verified. We will proceed with shipping within 3 working days. Thank you!"
+            
+            # Create WhatsApp link
+            whatsapp_link = f"https://wa.me/6{order['contact_number']}?text={urllib.parse.quote(whatsapp_message)}"
+            
+            # Send Telegram notification
+            telegram_message = f"✅ *PAYMENT VERIFIED*\n\n"
+            telegram_message += f"📦 Order ID: {order_id}\n"
+            telegram_message += f"👤 Customer: {order['customer_name']}\n"
+            telegram_message += f"💵 Amount: RM{order['total_price']:.2f}\n"
+            telegram_message += f"👨‍💼 Verified by: {session.get('admin_username', 'admin')}\n\n"
+            telegram_message += f"📱 WhatsApp Message to send:\n"
+            telegram_message += f"{whatsapp_message}\n\n"
+            telegram_message += f"🔗 WhatsApp Link: {whatsapp_link}\n\n"
+            telegram_message += f"⏰ {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            
+            send_telegram_message(telegram_message)
+            
+            return jsonify({
+                'success': True, 
+                'message': 'Payment verified successfully',
+                'whatsapp_message': whatsapp_message,
+                'whatsapp_link': whatsapp_link,
+                'customer_name': order['customer_name'],
+                'order_id': order_id
+            })
+        except Exception as e:
+            print(f"Error verifying payment: {e}")
+            return jsonify({'success': False, 'message': f'Error: {str(e)}'})
     
     elif action == 'reject':
         reason = request.form.get('reason', '')
-        g.conn.execute('''
-            UPDATE orders 
-            SET payment_verified = 0, 
-                payment_status = 'rejected',
-                updated_at = CURRENT_TIMESTAMP
-            WHERE order_id = ?
-        ''', (order_id,))
-        g.conn.commit()
+        # Clean the reason string
+        reason = reason.replace('#', '').strip()
         
-        message = f"❌ *PAYMENT REJECTED*\n\n"
-        message += f"📦 Order ID: {order_id}\n"
-        message += f"👤 Customer: {order['customer_name']}\n"
-        message += f"💵 Amount: RM{order['total_price']:.2f}\n"
-        message += f"📝 Reason: {reason}\n"
-        message += f"⏰ {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-        
-        send_telegram_message(message)
-        
-        return jsonify({'success': True, 'message': 'Payment rejected'})
+        try:
+            g.conn.execute('''
+                UPDATE orders 
+                SET payment_verified = 0, 
+                    payment_status = 'rejected',
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE order_id = ?
+            ''', (order_id,))
+            g.conn.commit()
+            
+            # Generate WhatsApp message for rejection
+            whatsapp_message = f"Hi {order['customer_name']}, your payment for Order {order_id} was rejected. Reason: {reason}. Please contact us for assistance."
+            whatsapp_link = f"https://wa.me/6{order['contact_number']}?text={urllib.parse.quote(whatsapp_message)}"
+            
+            telegram_message = f"❌ *PAYMENT REJECTED*\n\n"
+            telegram_message += f"📦 Order ID: {order_id}\n"
+            telegram_message += f"👤 Customer: {order['customer_name']}\n"
+            telegram_message += f"💵 Amount: RM{order['total_price']:.2f}\n"
+            telegram_message += f"📝 Reason: {reason}\n\n"
+            telegram_message += f"📱 WhatsApp Message to send:\n"
+            telegram_message += f"{whatsapp_message}\n\n"
+            telegram_message += f"🔗 WhatsApp Link: {whatsapp_link}\n\n"
+            telegram_message += f"⏰ {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            
+            send_telegram_message(telegram_message)
+            
+            return jsonify({
+                'success': True, 
+                'message': 'Payment rejected',
+                'whatsapp_message': whatsapp_message,
+                'whatsapp_link': whatsapp_link,
+                'customer_name': order['customer_name'],
+                'order_id': order_id
+            })
+        except Exception as e:
+            print(f"Error rejecting payment: {e}")
+            return jsonify({'success': False, 'message': f'Error: {str(e)}'})
     
     return jsonify({'success': False, 'message': 'Invalid action'})
+
+@app.route('/admin/verify_payments')
+@admin_required
+def admin_verify_payments():
+    """Payment verification page"""
+    # Get orders awaiting verification
+    orders_result = g.conn.execute('''
+        SELECT * FROM orders 
+        WHERE payment_status = 'pending_verification'
+        ORDER BY created_at DESC
+    ''').fetchall()
+    
+    # Get order items for each order
+    orders_with_items = []
+    for order in orders_result:
+        # Convert Row to dict properly
+        order_dict = dict(order)
+        
+        # Get items for this order
+        items_result = g.conn.execute(
+            'SELECT * FROM order_items WHERE order_id = ?', 
+            (order['order_id'],)
+        ).fetchall()
+        
+        # Convert items to list of dicts
+        items_list = [dict(item) for item in items_result]
+        
+        # Use a different key name to avoid conflict with dict.items() method
+        order_dict['order_items'] = items_list
+        orders_with_items.append(order_dict)
+    
+    # Calculate pending payments count
+    pending_payments = len(orders_with_items)
+    
+    return render_template('admin_verify_payments.html', 
+                         orders=orders_with_items,
+                         pending_payments=pending_payments)
+
+@app.context_processor
+def inject_pending_payments():
+    """Inject pending payments count into all templates"""
+    if hasattr(g, 'conn'):
+        pending_count = g.conn.execute(
+            'SELECT COUNT(*) FROM orders WHERE payment_status = "pending_verification"'
+        ).fetchone()[0]
+        return dict(pending_payments=pending_count)
+    return dict(pending_payments=0)
 
 @app.route('/admin/orders/add_tracking/<order_id>', methods=['POST'])
 @admin_required
@@ -902,8 +1008,11 @@ def update_database_schema():
         
         for column_name, column_type in new_columns:
             if column_name not in columns:
-                cursor.execute(f'ALTER TABLE orders ADD COLUMN {column_name} {column_type}')
-                print(f"✅ Added {column_name} column to orders table")
+                try:
+                    cursor.execute(f'ALTER TABLE orders ADD COLUMN {column_name} {column_type}')
+                    print(f"✅ Added {column_name} column to orders table")
+                except sqlite3.OperationalError as e:
+                    print(f"⚠️ Could not add {column_name}: {e}")
         
         # Create admin_settings table if not exists
         cursor.execute('''
@@ -926,6 +1035,4 @@ def update_database_schema():
 if __name__ == '__main__':
     init_db()
     update_database_schema()
-    # Remove debug=True for production
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(debug=True, port=5000)

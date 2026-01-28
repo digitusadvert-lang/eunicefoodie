@@ -1,0 +1,471 @@
+<!-- templates/payment_not_available.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+        {% if order.payment_status == 'verified' %}
+            Payment Verified - Order {{ order.order_id }}
+        {% elif order.payment_status == 'pending_verification' %}
+            Payment Submitted - Order {{ order.order_id }}
+        {% elif order.payment_status == 'rejected' %}
+            Payment Rejected - Order {{ order.order_id }}
+        {% else %}
+            Payment Not Available - Order {{ order.order_id }}
+        {% endif %}
+    </title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                
+                <!-- VERIFIED PAYMENT -->
+                {% if order.payment_status == 'verified' %}
+                <div class="card border-success shadow-lg">
+                    <div class="card-header bg-success text-white text-center py-4">
+                        <div class="display-1 mb-3">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <h1 class="card-title">Payment Verified Successfully!</h1>
+                    </div>
+                    
+                    <div class="card-body text-center py-4">
+                        <div class="mb-4">
+                            <h3>Order {{ order.order_id }}</h3>
+                            <p class="lead">Your payment has been verified and your order is confirmed!</p>
+                        </div>
+                        
+                        <div class="alert alert-success mb-4">
+                            <h5><i class="fas fa-info-circle"></i> Current Order Status</h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Order Status:</strong></p>
+                                    <span class="badge bg-success">
+                                        {{ order.status|title }}
+                                    </span>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>Payment Status:</strong></p>
+                                    <span class="badge bg-success">
+                                        {{ order.payment_status|title }}
+                                    </span>
+                                </div>
+                            </div>
+                            {% if order.payment_verified_at %}
+                            <p class="mt-3 mb-0">
+                                <i class="fas fa-calendar-check"></i> 
+                                <strong>Verified on:</strong> {{ order.payment_verified_at|datetimeformat }}
+                            </p>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h5><i class="fas fa-shipping-fast"></i> What Happens Next?</h5>
+                            <div class="row text-start">
+                                <div class="col-md-6">
+                                    <div class="card border-0 bg-light mb-3">
+                                        <div class="card-body">
+                                            <h6><i class="fas fa-box text-primary"></i> Order Processing</h6>
+                                            <p class="mb-0">Your order is being prepared for shipment.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card border-0 bg-light mb-3">
+                                        <div class="card-body">
+                                            <h6><i class="fas fa-truck text-primary"></i> Shipping</h6>
+                                            <p class="mb-0">Will be shipped within <strong>3 working days</strong>.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card border-0 bg-light mb-3">
+                                        <div class="card-body">
+                                            <h6><i class="fas fa-qrcode text-primary"></i> Tracking</h6>
+                                            <p class="mb-0">You'll receive tracking number via WhatsApp.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card border-0 bg-light mb-3">
+                                        <div class="card-body">
+                                            <h6><i class="fas fa-home text-primary"></i> Delivery</h6>
+                                            <p class="mb-0">Expected delivery: <strong>3-5 business days</strong>.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-headset"></i> Need Assistance?</h6>
+                            <p class="mb-0">If you have questions about your order, please contact our support team.</p>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <a href="{{ url_for('user_products') }}" class="btn btn-primary btn-lg">
+                                <i class="fas fa-shopping-bag"></i> Continue Shopping
+                            </a>
+                            <button class="btn btn-outline-success btn-lg" onclick="contactAdmin('{{ order.contact_number }}')">
+                                <i class="fab fa-whatsapp"></i> Contact Support
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="card-footer text-center bg-light py-3">
+                        <p class="mb-0 text-success">
+                            <i class="fas fa-thumbs-up"></i> Thank you for your order! We appreciate your business.
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- PENDING VERIFICATION -->
+                {% elif order.payment_status == 'pending_verification' %}
+                <div class="card border-warning shadow-lg">
+                    <div class="card-header bg-warning text-dark text-center py-4">
+                        <div class="display-1 mb-3">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <h1 class="card-title">Payment Submitted Successfully</h1>
+                    </div>
+                    
+                    <div class="card-body text-center py-4">
+                        <div class="mb-4">
+                            <h3>Order {{ order.order_id }}</h3>
+                            <p class="lead">Your payment has been received and is being verified.</p>
+                        </div>
+                        
+                        <div class="alert alert-warning mb-4">
+                            <h5><i class="fas fa-info-circle"></i> Current Status</h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Order Status:</strong></p>
+                                    <span class="badge bg-warning">
+                                        {{ order.status|title }}
+                                    </span>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>Payment Status:</strong></p>
+                                    <span class="badge bg-warning">
+                                        Pending Verification
+                                    </span>
+                                </div>
+                            </div>
+                            <p class="mt-3 mb-0">
+                                <i class="fas fa-history"></i> 
+                                <strong>Submitted on:</strong> {{ order.created_at|datetimeformat }}
+                            </p>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h5><i class="fas fa-hourglass-half"></i> What's Happening Now?</h5>
+                            <div class="row text-start">
+                                <div class="col-md-6">
+                                    <div class="card border-0 bg-light mb-3">
+                                        <div class="card-body">
+                                            <h6><i class="fas fa-user-check text-warning"></i> Admin Review</h6>
+                                            <p class="mb-0">Our team is checking your payment details.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card border-0 bg-light mb-3">
+                                        <div class="card-body">
+                                            <h6><i class="fas fa-stopwatch text-warning"></i> Timeline</h6>
+                                            <p class="mb-0">Verification usually takes <strong>24 hours</strong>.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card border-0 bg-light mb-3">
+                                        <div class="card-body">
+                                            <h6><i class="fas fa-bell text-warning"></i> Notification</h6>
+                                            <p class="mb-0">You'll receive confirmation via WhatsApp.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card border-0 bg-light mb-3">
+                                        <div class="card-body">
+                                            <h6><i class="fas fa-shipping-fast text-warning"></i> Next Steps</h6>
+                                            <p class="mb-0">After verification, we'll ship your order.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-lightbulb"></i> Important Note</h6>
+                            <p class="mb-0">Please ensure your WhatsApp is active. We'll contact you at <strong>+6{{ order.contact_number }}</strong>.</p>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <a href="{{ url_for('user_products') }}" class="btn btn-primary btn-lg">
+                                <i class="fas fa-shopping-bag"></i> Continue Shopping
+                            </a>
+                            <button class="btn btn-outline-warning btn-lg" onclick="window.history.back()">
+                                <i class="fas fa-arrow-left"></i> Go Back
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="card-footer text-center bg-light py-3">
+                        <p class="mb-0">
+                            <i class="fas fa-envelope"></i> 
+                            We'll notify you as soon as your payment is verified.
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- REJECTED PAYMENT -->
+                {% elif order.payment_status == 'rejected' %}
+                <div class="card border-danger shadow-lg">
+                    <div class="card-header bg-danger text-white text-center py-4">
+                        <div class="display-1 mb-3">
+                            <i class="fas fa-times-circle"></i>
+                        </div>
+                        <h1 class="card-title">Payment Rejected</h1>
+                    </div>
+                    
+                    <div class="card-body text-center py-4">
+                        <div class="mb-4">
+                            <h3>Order {{ order.order_id }}</h3>
+                            <p class="lead">Your payment was not approved. Please contact us for assistance.</p>
+                        </div>
+                        
+                        <div class="alert alert-danger mb-4">
+                            <h5><i class="fas fa-info-circle"></i> Current Status</h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Order Status:</strong></p>
+                                    <span class="badge bg-danger">
+                                        {{ order.status|title }}
+                                    </span>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>Payment Status:</strong></p>
+                                    <span class="badge bg-danger">
+                                        {{ order.payment_status|title }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h5><i class="fas fa-exclamation-triangle"></i> What Should You Do?</h5>
+                            <div class="row text-start">
+                                <div class="col-md-6">
+                                    <div class="card border-0 bg-light mb-3">
+                                        <div class="card-body">
+                                            <h6><i class="fas fa-comment-dots text-danger"></i> Contact Admin</h6>
+                                            <p class="mb-0">Reach out to understand the rejection reason.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card border-0 bg-light mb-3">
+                                        <div class="card-body">
+                                            <h6><i class="fas fa-redo text-danger"></i> Resubmit Payment</h6>
+                                            <p class="mb-0">You may need to submit payment again.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card border-0 bg-light mb-3">
+                                        <div class="card-body">
+                                            <h6><i class="fas fa-question-circle text-danger"></i> Clarify Requirements</h6>
+                                            <p class="mb-0">Get clear instructions for correct payment.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card border-0 bg-light mb-3">
+                                        <div class="card-body">
+                                            <h6><i class="fas fa-sync-alt text-danger"></i> Update Information</h6>
+                                            <p class="mb-0">Provide any missing or corrected details.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-warning">
+                            <h6><i class="fas fa-lightbulb"></i> Common Reasons for Rejection</h6>
+                            <ul class="mb-0 text-start">
+                                <li>Unclear receipt/payment proof</li>
+                                <li>Incorrect payment amount</li>
+                                <li>Missing order reference in payment</li>
+                                <li>Suspicious payment activity</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-danger btn-lg" onclick="contactAdmin('{{ order.contact_number }}')">
+                                <i class="fab fa-whatsapp"></i> Contact Admin Now
+                            </button>
+                            <a href="{{ url_for('user_products') }}" class="btn btn-outline-secondary btn-lg">
+                                <i class="fas fa-shopping-bag"></i> Continue Shopping
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="card-footer text-center bg-light py-3">
+                        <p class="mb-0">
+                            <i class="fas fa-phone"></i> 
+                            Need immediate help? Call: <a href="tel:+60123456789">+60 12-345 6789</a>
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- OTHER CASES (Payment Not Available) -->
+                {% else %}
+                <div class="card border-secondary shadow-lg">
+                    <div class="card-header bg-secondary text-white text-center py-4">
+                        <div class="display-1 mb-3">
+                            <i class="fas fa-info-circle"></i>
+                        </div>
+                        <h1 class="card-title">Payment Not Available</h1>
+                    </div>
+                    
+                    <div class="card-body text-center py-4">
+                        <div class="mb-4">
+                            <h3>Order {{ order.order_id }}</h3>
+                            <p class="lead">{{ message or "This order cannot accept payments at this time." }}</p>
+                        </div>
+                        
+                        <div class="alert alert-secondary mb-4">
+                            <h5><i class="fas fa-info-circle"></i> Current Order Status</h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Order Status:</strong></p>
+                                    <span class="badge bg-{{ 'success' if order.status == 'completed' else 'info' if order.status == 'shipped' else 'danger' if order.status == 'cancelled' else 'warning' }}">
+                                        {{ order.status|title }}
+                                    </span>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>Payment Status:</strong></p>
+                                    <span class="badge bg-{{ 'success' if order.payment_status == 'verified' else 'warning' if order.payment_status == 'pending' else 'danger' if order.payment_status == 'rejected' else 'info' }}">
+                                        {{ order.payment_status|title if order.payment_status else 'Not Set' }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h5><i class="fas fa-question-circle"></i> Possible Reasons</h5>
+                            <ul class="text-start">
+                                <li>Payment process has already been completed</li>
+                                <li>Order status has been updated</li>
+                                <li>Payment window has expired</li>
+                                <li>Order has been cancelled or modified</li>
+                                <li>System maintenance or update in progress</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <a href="{{ url_for('user_products') }}" class="btn btn-primary btn-lg">
+                                <i class="fas fa-shopping-bag"></i> Continue Shopping
+                            </a>
+                            <button class="btn btn-outline-secondary btn-lg" onclick="window.history.back()">
+                                <i class="fas fa-arrow-left"></i> Go Back
+                            </button>
+                            <button class="btn btn-outline-info btn-lg" onclick="contactAdmin('{{ order.contact_number }}')">
+                                <i class="fab fa-whatsapp"></i> Contact Support
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="card-footer text-center bg-light py-3">
+                        <p class="mb-0">
+                            <i class="fas fa-headset"></i> 
+                            Need assistance? Contact us at: <a href="tel:+60123456789">+60 12-345 6789</a>
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
+                
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function contactAdmin(phone) {
+        let message = '';
+        
+        // Different messages based on status
+        {% if order.payment_status == 'verified' %}
+        message = `Hi, I'm checking on my verified order {{ order.order_id }}.`;
+        {% elif order.payment_status == 'pending_verification' %}
+        message = `Hi, I'm checking the status of my pending order {{ order.order_id }}.`;
+        {% elif order.payment_status == 'rejected' %}
+        message = `Hi, my payment for order {{ order.order_id }} was rejected. Can you help?`;
+        {% else %}
+        message = `Hi, I need assistance with order {{ order.order_id }}.`;
+        {% endif %}
+        
+        const url = `https://wa.me/6${phone}?text=${encodeURIComponent(message)}`;
+        window.open(url, '_blank');
+    }
+    </script>
+
+    <style>
+    .card {
+        border-radius: 15px;
+        overflow: hidden;
+    }
+    
+    .display-1 {
+        font-size: 5rem;
+    }
+    
+    .badge {
+        font-size: 1rem;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+    }
+    
+    .alert {
+        border-radius: 10px;
+        border: none;
+    }
+    
+    .btn-lg {
+        font-size: 1.1rem;
+        padding: 0.75rem 1.5rem;
+    }
+    
+    .card.border-0 {
+        border: none !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .card.border-0:hover {
+        transform: translateY(-2px);
+        transition: transform 0.2s;
+    }
+    
+    @media (max-width: 768px) {
+        .display-1 {
+            font-size: 3.5rem;
+        }
+        
+        h1 {
+            font-size: 1.8rem;
+        }
+        
+        .card-body {
+            padding: 1.5rem !important;
+        }
+        
+        .d-grid.gap-2 .btn {
+            margin-bottom: 0.5rem;
+        }
+    }
+    </style>
+</body>
+</html>

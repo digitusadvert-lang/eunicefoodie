@@ -1,0 +1,605 @@
+<!-- templates/admin_verify_payments.html -->
+{% extends "admin_base.html" %}
+
+{% block title %}Verify Payments{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-money-check-alt"></i> Verify Payments</h1>
+        <span class="badge bg-warning text-dark fs-6">
+            {{ orders|length }} Pending Verification
+        </span>
+    </div>
+
+    {% if orders %}
+    <div class="row">
+        {% for order in orders %}
+        <div class="col-lg-6 mb-4">
+            <div class="card border-{% if order.payment_receipt %}primary{% else %}warning{% endif %} shadow-sm">
+                <div class="card-header bg-{% if order.payment_receipt %}primary{% else %}warning{% endif %} text-white d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-0">
+                            <i class="fas fa-receipt"></i> Order {{ order.order_id }}
+                        </h5>
+                        <small>Submitted: {{ order.created_at|datetimeformat }}</small>
+                    </div>
+                    <span class="badge bg-light text-dark">
+                        RM{{ "%.2f"|format(order.total_price) }}
+                    </span>
+                </div>
+                
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <p><strong>Customer:</strong> {{ order.customer_name }}</p>
+                            <p><strong>Contact:</strong> +6{{ order.contact_number }}</p>
+                            <p><strong>Method:</strong> {{ order.payment_method or 'Not specified' }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Shipping:</strong> {{ order.postcode }} {{ order.state }}</p>
+                            <p><strong>Region:</strong> {{ order.region|title }}</p>
+                            <p><strong>Shipping Fee:</strong> RM{{ "%.2f"|format(order.shipping_fee) }}</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Order Items -->
+                    <div class="mb-3">
+                        <p><strong>Order Items:</strong></p>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Product</th>
+                                        <th class="text-center">Qty</th>
+                                        <th class="text-end">Price</th>
+                                        <th class="text-end">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in order.order_items %}
+                                    <tr>
+                                        <td>{{ item.product_name }}</td>
+                                        <td class="text-center">{{ item.quantity }}</td>
+                                        <td class="text-end">RM{{ "%.2f"|format(item.price) }}</td>
+                                        <td class="text-end">RM{{ "%.2f"|format(item.price * item.quantity) }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="3" class="text-end"><strong>Subtotal:</strong></td>
+                                        <td class="text-end">RM{{ "%.2f"|format(order.total_price - order.shipping_fee) }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="3" class="text-end"><strong>Shipping:</strong></td>
+                                        <td class="text-end">RM{{ "%.2f"|format(order.shipping_fee) }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="3" class="text-end"><strong>Total:</strong></td>
+                                        <td class="text-end"><strong>RM{{ "%.2f"|format(order.total_price) }}</strong></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    {% if order.payment_receipt %}
+                    <div class="mb-3">
+                        <p><strong>Payment Receipt:</strong></p>
+                        <div class="text-center">
+                            <a href="{{ url_for('static', filename='receipts/' + order.payment_receipt) }}" 
+                               target="_blank" 
+                               class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-eye"></i> View Receipt
+                            </a>
+                            <button class="btn btn-outline-secondary btn-sm" 
+                                    onclick="downloadReceipt('{{ order.payment_receipt }}')">
+                                <i class="fas fa-download"></i> Download
+                            </button>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i> No receipt uploaded
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Verification Buttons -->
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-success flex-fill" 
+                                onclick="verifyPayment('{{ order.order_id }}')">
+                            <i class="fas fa-check-circle"></i> Verify Payment
+                        </button>
+                        <button class="btn btn-danger flex-fill" 
+                                onclick="rejectPayment('{{ order.order_id }}')">
+                            <i class="fas fa-times-circle"></i> Reject Payment
+                        </button>
+                        <button class="btn btn-info" 
+                                onclick="whatsappCustomer('{{ order.contact_number }}', '{{ order.order_id }}')"
+                                title="Contact Customer">
+                            <i class="fab fa-whatsapp"></i>
+                        </button>
+                        <a href="{{ url_for('order_details', order_id=order.order_id) }}" 
+                           class="btn btn-secondary"
+                           title="View Order Details">
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>
+                    </div>
+                    
+                    <!-- Rejection Reason (hidden by default) -->
+                    <div id="rejectForm_{{ order.order_id }}" class="mt-3 d-none">
+                        <form onsubmit="submitRejection(event, '{{ order.order_id }}')">
+                            <div class="input-group">
+                                <input type="text" 
+                                       id="rejectReason_{{ order.order_id }}"
+                                       class="form-control" 
+                                       placeholder="Reason for rejection..."
+                                       required>
+                                <button type="submit" class="btn btn-danger">
+                                    <i class="fas fa-paper-plane"></i> Submit
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <div class="card-footer bg-light">
+                    <small class="text-muted">
+                        <i class="fas fa-clock"></i> 
+                        Waiting for verification since {{ order.created_at|datetimeformat }}
+                    </small>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <div class="display-1 text-muted mb-3">
+            <i class="fas fa-check-circle"></i>
+        </div>
+        <h3>No Payments to Verify</h3>
+        <p class="text-muted">All payments have been verified.</p>
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-primary">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Verification Modal -->
+<div class="modal fade" id="verifyModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fas fa-check-circle"></i> Verify Payment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to verify this payment?</p>
+                <p class="mb-0"><strong>Order ID:</strong> <span id="verifyOrderId"></span></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="confirmVerify">Yes, Verify Payment</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- WhatsApp Message Modal -->
+<div class="modal fade" id="whatsappModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fab fa-whatsapp"></i> WhatsApp Message Ready</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-success">
+                    <h6><i class="fas fa-check-circle"></i> Payment Verified Successfully!</h6>
+                    <p class="mb-0">Copy the message below and send it to the customer via WhatsApp.</p>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label"><strong>Customer:</strong> <span id="modalCustomerName"></span></label>
+                    <label class="form-label ms-3"><strong>Order ID:</strong> <span id="modalOrderId"></span></label>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="whatsappMessage" class="form-label"><strong>Message to Send:</strong></label>
+                    <textarea id="whatsappMessage" class="form-control" rows="5" readonly style="font-family: monospace;"></textarea>
+                </div>
+                
+                <div class="d-flex gap-2 mb-3">
+                    <button class="btn btn-success flex-fill" onclick="copyMessage()">
+                        <i class="fas fa-copy"></i> Copy Message
+                    </button>
+                    <a id="whatsappDirectLink" target="_blank" class="btn btn-success flex-fill">
+                        <i class="fab fa-whatsapp"></i> Open WhatsApp
+                    </a>
+                </div>
+                
+                <div class="alert alert-info">
+                    <small>
+                        <i class="fas fa-lightbulb"></i> <strong>Tip:</strong> 
+                        Click "Open WhatsApp" to open WhatsApp with the message pre-filled. 
+                        You can edit the message before sending if needed.
+                    </small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="closeAndReload()">Close & Reload</button>
+                <button type="button" class="btn btn-primary" onclick="sendAndClose()">
+                    <i class="fas fa-paper-plane"></i> Send & Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Rejection WhatsApp Modal -->
+<div class="modal fade" id="rejectWhatsappModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fab fa-whatsapp"></i> Rejection Message Ready</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <h6><i class="fas fa-times-circle"></i> Payment Rejected</h6>
+                    <p class="mb-0">Copy the message below and send it to the customer via WhatsApp.</p>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label"><strong>Customer:</strong> <span id="rejectModalCustomerName"></span></label>
+                    <label class="form-label ms-3"><strong>Order ID:</strong> <span id="rejectModalOrderId"></span></label>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="rejectWhatsappMessage" class="form-label"><strong>Rejection Message:</strong></label>
+                    <textarea id="rejectWhatsappMessage" class="form-control" rows="5" readonly style="font-family: monospace;"></textarea>
+                </div>
+                
+                <div class="d-flex gap-2 mb-3">
+                    <button class="btn btn-danger flex-fill" onclick="copyRejectMessage()">
+                        <i class="fas fa-copy"></i> Copy Message
+                    </button>
+                    <a id="rejectWhatsappDirectLink" target="_blank" class="btn btn-danger flex-fill">
+                        <i class="fab fa-whatsapp"></i> Open WhatsApp
+                    </a>
+                </div>
+                
+                <div class="alert alert-info">
+                    <small>
+                        <i class="fas fa-lightbulb"></i> <strong>Important:</strong> 
+                        Please inform the customer why their payment was rejected and what they should do next.
+                    </small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="closeAndReload()">Close & Reload</button>
+                <button type="button" class="btn btn-primary" onclick="sendRejectAndClose()">
+                    <i class="fas fa-paper-plane"></i> Send & Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+let currentOrderId = '';
+
+function verifyPayment(orderId) {
+    currentOrderId = orderId;
+    document.getElementById('verifyOrderId').textContent = orderId;
+    
+    const modal = new bootstrap.Modal(document.getElementById('verifyModal'));
+    modal.show();
+}
+
+document.getElementById('confirmVerify').addEventListener('click', function() {
+    if (!currentOrderId) return;
+    
+    const btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
+    
+    fetch(`/admin/orders/verify_payment/${currentOrderId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'action=verify'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Close verification modal
+            const verifyModal = bootstrap.Modal.getInstance(document.getElementById('verifyModal'));
+            verifyModal.hide();
+            
+            // Show WhatsApp message modal
+            showWhatsAppMessage(data);
+        } else {
+            showAlert(data.message || 'Error verifying payment', 'danger');
+            btn.disabled = false;
+            btn.innerHTML = 'Yes, Verify Payment';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showAlert('Error verifying payment', 'danger');
+        btn.disabled = false;
+        btn.innerHTML = 'Yes, Verify Payment';
+    });
+});
+
+function showWhatsAppMessage(data) {
+    // Populate modal with data
+    document.getElementById('modalCustomerName').textContent = data.customer_name;
+    document.getElementById('modalOrderId').textContent = data.order_id;
+    document.getElementById('whatsappMessage').value = data.whatsapp_message;
+    document.getElementById('whatsappDirectLink').href = data.whatsapp_link;
+    
+    // Show the modal
+    const whatsappModal = new bootstrap.Modal(document.getElementById('whatsappModal'));
+    whatsappModal.show();
+}
+
+function showRejectWhatsAppMessage(data) {
+    // Populate reject modal with data
+    document.getElementById('rejectModalCustomerName').textContent = data.customer_name;
+    document.getElementById('rejectModalOrderId').textContent = data.order_id;
+    document.getElementById('rejectWhatsappMessage').value = data.whatsapp_message;
+    document.getElementById('rejectWhatsappDirectLink').href = data.whatsapp_link;
+    
+    // Show the reject modal
+    const rejectModal = new bootstrap.Modal(document.getElementById('rejectWhatsappModal'));
+    rejectModal.show();
+}
+
+function copyMessage() {
+    const messageText = document.getElementById('whatsappMessage');
+    messageText.select();
+    messageText.setSelectionRange(0, 99999); // For mobile devices
+    
+    try {
+        document.execCommand('copy');
+        showAlert('✅ Message copied to clipboard!', 'success');
+    } catch (err) {
+        // Fallback for modern browsers
+        navigator.clipboard.writeText(messageText.value)
+            .then(() => showAlert('✅ Message copied to clipboard!', 'success'))
+            .catch(() => showAlert('❌ Failed to copy message', 'danger'));
+    }
+}
+
+function copyRejectMessage() {
+    const messageText = document.getElementById('rejectWhatsappMessage');
+    messageText.select();
+    messageText.setSelectionRange(0, 99999);
+    
+    try {
+        document.execCommand('copy');
+        showAlert('✅ Rejection message copied to clipboard!', 'success');
+    } catch (err) {
+        navigator.clipboard.writeText(messageText.value)
+            .then(() => showAlert('✅ Rejection message copied to clipboard!', 'success'))
+            .catch(() => showAlert('❌ Failed to copy message', 'danger'));
+    }
+}
+
+function sendAndClose() {
+    // Open WhatsApp in new tab
+    window.open(document.getElementById('whatsappDirectLink').href, '_blank');
+    
+    // Close modal
+    const whatsappModal = bootstrap.Modal.getInstance(document.getElementById('whatsappModal'));
+    whatsappModal.hide();
+    
+    // Show success message
+    showAlert('✅ Payment verified! WhatsApp opened for customer notification.', 'success');
+    
+    // Reload page after 2 seconds to update order list
+    setTimeout(() => location.reload(), 2000);
+}
+
+function sendRejectAndClose() {
+    // Open WhatsApp in new tab
+    window.open(document.getElementById('rejectWhatsappDirectLink').href, '_blank');
+    
+    // Close modal
+    const rejectModal = bootstrap.Modal.getInstance(document.getElementById('rejectWhatsappModal'));
+    rejectModal.hide();
+    
+    // Show success message
+    showAlert('✅ Payment rejected! WhatsApp opened to inform customer.', 'success');
+    
+    // Reload page after 2 seconds
+    setTimeout(() => location.reload(), 2000);
+}
+
+function closeAndReload() {
+    // Just reload the page to update the order list
+    location.reload();
+}
+
+function rejectPayment(orderId) {
+    currentOrderId = orderId;
+    const rejectForm = document.getElementById(`rejectForm_${orderId}`);
+    rejectForm.classList.toggle('d-none');
+}
+
+function submitRejection(event, orderId) {
+    event.preventDefault();
+    
+    const reason = document.getElementById(`rejectReason_${orderId}`).value;
+    if (!reason.trim()) {
+        showAlert('Please enter a reason for rejection', 'warning');
+        return;
+    }
+    
+    if (!confirm(`Are you sure you want to reject payment for order ${orderId}?`)) {
+        return;
+    }
+    
+    fetch(`/admin/orders/verify_payment/${orderId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `action=reject&reason=${encodeURIComponent(reason)}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Close any open reject forms
+            const rejectForm = document.getElementById(`rejectForm_${orderId}`);
+            if (rejectForm) {
+                rejectForm.classList.add('d-none');
+            }
+            
+            // Clear the reason input
+            const reasonInput = document.getElementById(`rejectReason_${orderId}`);
+            if (reasonInput) {
+                reasonInput.value = '';
+            }
+            
+            // Show WhatsApp message modal for rejection
+            showRejectWhatsAppMessage(data);
+        } else {
+            showAlert(data.message || 'Error rejecting payment', 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showAlert('Error rejecting payment', 'danger');
+    });
+}
+
+function downloadReceipt(filename) {
+    window.open(`/static/receipts/${filename}`, '_blank');
+}
+
+function whatsappCustomer(phone, orderId) {
+    const message = `Hi, regarding your order ${orderId}.`;
+    const url = `https://wa.me/6${phone}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
+}
+
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed top-0 end-0 m-3`;
+    alertDiv.style.zIndex = '9999';
+    alertDiv.style.maxWidth = '400px';
+    alertDiv.innerHTML = `
+        <div class="d-flex align-items-center">
+            <div class="flex-grow-1">${message}</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    document.body.appendChild(alertDiv);
+    
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+
+// Bootstrap tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+
+<style>
+.card {
+    transition: transform 0.2s;
+    border-radius: 10px;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1) !important;
+}
+
+.badge {
+    font-size: 0.8em;
+    padding: 0.5em 0.8em;
+}
+
+.btn {
+    transition: all 0.2s;
+    border-radius: 5px;
+}
+
+.position-fixed {
+    min-width: 300px;
+    max-width: 400px;
+}
+
+.table-sm th, .table-sm td {
+    padding: 0.5rem;
+}
+
+.input-group {
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.modal-content {
+    border-radius: 10px;
+    border: none;
+}
+
+.alert {
+    border-radius: 8px;
+    border: none;
+}
+
+.display-1 {
+    font-size: 5rem;
+    opacity: 0.3;
+}
+
+textarea[readonly] {
+    background-color: #f8f9fa;
+    font-size: 0.95rem;
+}
+
+textarea[readonly]:focus {
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+    box-shadow: none;
+}
+
+.modal-footer {
+    border-top: 1px solid #dee2e6;
+    padding: 1rem;
+}
+
+@media (max-width: 768px) {
+    .d-flex.gap-2 {
+        flex-wrap: wrap;
+    }
+    
+    .d-flex.gap-2 .btn {
+        flex: 1 0 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    .modal-dialog {
+        margin: 0.5rem;
+    }
+}
+</style>
+{% endblock %}

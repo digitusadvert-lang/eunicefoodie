@@ -252,6 +252,12 @@
                        class="nav-link {% if request.endpoint == 'admin_settings' %}active{% endif %}">
                         <i class="fas fa-cog"></i> Settings
                     </a>
+                    <a class="nav-link" href="{{ url_for('admin_verify_payments') }}">
+                        <i class="fas fa-money-check-alt"></i> Verify Payments
+                        {% if pending_payments > 0 %}
+                        <span class="badge bg-danger">{{ pending_payments }}</span>
+                        {% endif %}
+                    </a>
                     
                     <div class="mt-4 pt-3 border-top border-secondary">
                         <a href="/" class="nav-link" target="_blank">
