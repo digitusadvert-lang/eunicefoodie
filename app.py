@@ -8,6 +8,40 @@ import os
 from functools import wraps
 import json
 import urllib.parse
+import os
+import re
+import uuid
+from werkzeug.utils import secure_filename
+
+def allowed_file(filename):
+    """Check if the file extension is allowed"""
+    allowed_extensions = {'jpg', 'jpeg', 'png', 'gif', 'pdf', 'webp', 'bmp'}
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in allowed_extensions
+
+def validate_file_size(file):
+    """Check if file size is within limit (5MB)"""
+    file.seek(0, os.SEEK_END)
+    file_length = file.tell()
+    file.seek(0)  # Reset file pointer
+    return file_length <= 5 * 1024 * 1024  # 5MB
+
+def generate_secure_filename(original_filename, order_id):
+    """Generate a secure and unique filename"""
+    import re
+    
+    # Get file extension
+    file_ext = original_filename.rsplit('.', 1)[1].lower() if '.' in original_filename else ''
+    
+    # Clean the base name
+    base_name = re.sub(r'[^\w\s.-]', '', original_filename.rsplit('.', 1)[0])
+    base_name = base_name.strip().replace(' ', '_')
+    
+    # Generate unique filename
+    unique_id = str(uuid.uuid4())[:8]
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    
+    return f"receipt_{order_id}_{timestamp}_{unique_id}.{file_ext}"
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here'
@@ -499,48 +533,133 @@ def payment_page(order_id):
                                  payment_methods=PAYMENT_METHODS,
                                  error="Please select a payment method")
         
-        # Safer update without updated_at for now
-        g.conn.execute('''
-            UPDATE orders 
-            SET payment_method = ?, payment_status = 'pending_verification'
-            WHERE order_id = ?
-        ''', (payment_method, order_id))
+        # Check if receipt is uploaded
+        if 'receipt' not in request.files or request.files['receipt'].filename == '':
+            return render_template('payment_page.html',
+                                 order=order,
+                                 items=items,
+                                 settings=settings,
+                                 payment_methods=PAYMENT_METHODS,
+                                 error="Please upload payment receipt")
         
-        # Handle receipt upload
-        if 'receipt' in request.files and request.files['receipt'].filename != '':
-            file = request.files['receipt']
-            filename = f"receipt_{order_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file = request.files['receipt']
+        
+        # ============ FILE VALIDATION START ============
+        # 1. Check allowed file extensions
+        allowed_extensions = {'jpg', 'jpeg', 'png', 'gif', 'pdf', 'webp', 'bmp'}
+        file_ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
+        
+        if not file_ext or file_ext not in allowed_extensions:
+            return render_template('payment_page.html',
+                                 order=order,
+                                 items=items,
+                                 settings=settings,
+                                 payment_methods=PAYMENT_METHODS,
+                                 error=f"File type '{file_ext}' not supported. Please upload JPG, PNG, GIF, PDF, WebP, or BMP files only.")
+        
+        # 2. Check file size (limit to 5MB)
+        file.seek(0, os.SEEK_END)
+        file_length = file.tell()
+        file.seek(0)  # Reset file pointer
+        
+        if file_length > 5 * 1024 * 1024:  # 5MB
+            return render_template('payment_page.html',
+                                 order=order,
+                                 items=items,
+                                 settings=settings,
+                                 payment_methods=PAYMENT_METHODS,
+                                 error="File too large. Maximum size is 5MB.")
+        
+        # 3. Secure the filename
+        import re
+        import uuid
+        
+        # Generate a secure filename
+        original_filename = file.filename
+        secure_name = re.sub(r'[^\w\s.-]', '', original_filename)
+        secure_name = secure_name.strip().replace(' ', '_')
+        
+        # Generate unique filename to prevent collisions
+        unique_id = str(uuid.uuid4())[:8]
+        filename = f"receipt_{order_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{unique_id}.{file_ext}"
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        
+        # 4. Try to save the file
+        try:
             file.save(filepath)
+            print(f"✅ Receipt saved: {filename}")
             
+            # Verify file was saved (optional)
+            if not os.path.exists(filepath):
+                return render_template('payment_page.html',
+                                     order=order,
+                                     items=items,
+                                     settings=settings,
+                                     payment_methods=PAYMENT_METHODS,
+                                     error="Failed to save receipt. Please try again.")
+            
+        except Exception as e:
+            print(f"❌ Error saving file: {e}")
+            return render_template('payment_page.html',
+                                 order=order,
+                                 items=items,
+                                 settings=settings,
+                                 payment_methods=PAYMENT_METHODS,
+                                 error=f"Error saving file: {str(e)}. Please try again.")
+        # ============ FILE VALIDATION END ============
+        
+        # Update order with payment method and receipt
+        try:
             g.conn.execute('''
                 UPDATE orders 
-                SET payment_receipt = ? 
+                SET payment_method = ?, 
+                    payment_status = 'pending_verification',
+                    payment_receipt = ?,
+                    updated_at = CURRENT_TIMESTAMP
                 WHERE order_id = ?
-            ''', (filename, order_id))
-        
-        g.conn.commit()
+            ''', (payment_method, filename, order_id))
+            g.conn.commit()
+            
+        except Exception as e:
+            print(f"❌ Database error: {e}")
+            # Try to delete the uploaded file if database update fails
+            if os.path.exists(filepath):
+                try:
+                    os.remove(filepath)
+                except:
+                    pass
+            
+            return render_template('payment_page.html',
+                                 order=order,
+                                 items=items,
+                                 settings=settings,
+                                 payment_methods=PAYMENT_METHODS,
+                                 error=f"Database error: {str(e)}. Please try again.")
         
         # Send Telegram notification
-        message = f"💰 *PAYMENT SUBMITTED*\n\n"
-        message += f"📦 Order ID: {order_id}\n"
-        message += f"👤 Customer: {order['customer_name']}\n"
-        message += f"📱 WhatsApp: +6{order['contact_number']}\n"
-        message += f"💵 Amount: RM{order['total_price']:.2f}\n"
-        message += f"💳 Method: {payment_method}\n"
+        try:
+            message = f"💰 *PAYMENT SUBMITTED*\n\n"
+            message += f"📦 Order ID: {order_id}\n"
+            message += f"👤 Customer: {order['customer_name']}\n"
+            message += f"📱 WhatsApp: +6{order['contact_number']}\n"
+            message += f"💵 Amount: RM{order['total_price']:.2f}\n"
+            message += f"💳 Method: {payment_method}\n"
+            message += f"📎 Receipt: {filename}\n"
+            message += f"📏 File size: {file_length / 1024:.1f} KB\n"
+            message += f"\n⏰ {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            
+            send_telegram_message(message)
+        except Exception as e:
+            print(f"⚠️ Telegram notification failed: {e}")
+            # Continue even if Telegram fails
         
-        if 'receipt' in request.files and request.files['receipt'].filename != '':
-            message += f"📎 Receipt uploaded\n"
-        
-        message += f"\n⏰ {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-        
-        send_telegram_message(message)
-        
+        # Show success page
         return render_template('payment_submitted.html',
                              order_id=order_id,
                              customer_name=order['customer_name'],
                              current_time=datetime.now().strftime('%d %b %Y, %I:%M %p'))
     
+    # GET request - render the form
     return render_template('payment_page.html', 
                          order=order, 
                          items=items, 
