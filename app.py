@@ -51,7 +51,8 @@ SHIPPING_RATES = {
 # State to region mapping
 STATE_REGIONS = {
     'west': ['Johor', 'Kedah', 'Kelantan', 'Melaka', 'Negeri Sembilan', 
-             'Pahang', 'Penang', 'Perak', 'Perlis', 'Selangor', 'Terengganu'],
+             'Pahang', 'Penang', 'Perak', 'Perlis', 'Selangor', 'Terengganu',
+             'Kuala Lumpur'],
     'east': ['Sabah', 'Sarawak', 'Labuan']
 }
 
