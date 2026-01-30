@@ -1,0 +1,500 @@
+<!-- templates/product_reservation_report_final.html -->
+{% extends "admin_base.html" %}
+{% block title %}Product Reservation Report{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4">
+        <div>
+            <h1 class="mb-2">
+                <i class="fas fa-clipboard-check text-primary"></i> Product Reservation Report
+            </h1>
+            <p class="text-muted mb-0">
+                Summary of all verified reserved orders for purchasing
+            </p>
+        </div>
+        <div class="mt-2 mt-md-0">
+            <div class="btn-group">
+                <button type="button" class="btn btn-primary" onclick="exportReport()">
+                    <i class="fas fa-download"></i> Export
+                </button>
+                <button type="button" class="btn btn-success" onclick="generatePurchaseOrder()">
+                    <i class="fas fa-shopping-cart"></i> Generate PO
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card border-primary">
+                <div class="card-body text-center py-3">
+                    <h3 class="text-primary mb-1">{{ summary.total_orders }}</h3>
+                    <small class="text-muted">Reserved Orders</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-warning">
+                <div class="card-body text-center py-3">
+                    <h3 class="text-warning mb-1">{{ summary.total_items }}</h3>
+                    <small class="text-muted">Total Items</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-info">
+                <div class="card-body text-center py-3">
+                    <h3 class="text-info mb-1">{{ "%.1f"|format(summary.total_weight) }} kg</h3>
+                    <small class="text-muted">Total Weight</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-success">
+                <div class="card-body text-center py-3">
+                    <h3 class="text-success mb-1">RM{{ "%.2f"|format(summary.total_cost) }}</h3>
+                    <small class="text-muted">Estimated Cost</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Summary -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-boxes"></i> Product Summary
+                <span class="badge bg-light text-dark ms-2">{{ product_summary|length }} products</span>
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 5%">#</th>
+                            <th style="width: 30%">Product</th>
+                            <th class="text-center" style="width: 15%">Reserved Qty</th>
+                            <th class="text-center" style="width: 15%">Weight</th>
+                            <th class="text-end" style="width: 15%">Unit Price</th>
+                            <th class="text-end" style="width: 20%">Total Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in product_summary %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    {% if product.image_url %}
+                                    <img src="{{ url_for('static', filename='product_images/' + product.image_url) }}" 
+                                         alt="{{ product.name }}" 
+                                         class="rounded me-2"
+                                         style="width: 40px; height: 40px; object-fit: cover;">
+                                    {% endif %}
+                                    <div>
+                                        <strong>{{ product.name }}</strong>
+                                        <div class="small text-muted">ID: {{ product.id }}</div>
+                                        {% if product.orders %}
+                                        <div class="small text-info">
+                                            {{ product.orders|length }} orders
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-info rounded-pill px-3 py-2">
+                                    {{ product.total_quantity }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-warning">
+                                    {{ "%.2f"|format(product.total_weight) }} kg
+                                </span>
+                            </td>
+                            <td class="text-end">RM{{ "%.2f"|format(product.price) }}</td>
+                            <td class="text-end">
+                                <strong class="text-success">RM{{ "%.2f"|format(product.total_cost) }}</strong>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4">
+                                <div class="py-3">
+                                    <i class="fas fa-box-open fa-2x text-muted mb-3"></i>
+                                    <h5>No Reserved Products</h5>
+                                    <p class="text-muted">When customers reserve and verify payments, products will appear here.</p>
+                                    {% if summary.note %}
+                                    <div class="alert alert-info mt-3">
+                                        <small>{{ summary.note }}</small>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    {% if product_summary %}
+                    <tfoot class="table-group-divider">
+                        <tr class="table-success">
+                            <td colspan="2" class="text-end"><strong>TOTALS:</strong></td>
+                            <td class="text-center">
+                                <strong>{{ summary.total_items }}</strong>
+                            </td>
+                            <td class="text-center">
+                                <strong>{{ "%.2f"|format(summary.total_weight) }} kg</strong>
+                            </td>
+                            <td colspan="2" class="text-end">
+                                <strong class="fs-5">RM{{ "%.2f"|format(summary.total_cost) }}</strong>
+                            </td>
+                        </tr>
+                    </tfoot>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reserved Orders List -->
+    <div class="card">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-clipboard-list"></i> Reserved Orders
+                <span class="badge bg-light text-dark ms-2">{{ reserved_orders|length }} orders</span>
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="list-group list-group-flush">
+                {% for order in reserved_orders %}
+                <div class="list-group-item">
+                    <div class="row align-items-center">
+                        <div class="col-md-4 mb-2 mb-md-0">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <span class="badge bg-primary rounded-pill">{{ loop.index }}</span>
+                                </div>
+                                <div>
+                                    <strong class="d-block">{{ order.order_id }}</strong>
+                                    <small class="text-muted">{{ order.customer_name }}</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-2 mb-md-0">
+                            <div class="small">
+                                <i class="fas fa-calendar me-1"></i> {{ order.created_at|datetimeformat('short') }}
+                            </div>
+                            <div class="small text-muted">
+                                <i class="fas fa-phone me-1"></i> +6{{ order.contact_number }}
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-2 mb-md-0">
+                            <div class="small">
+                                <i class="fas fa-box me-1"></i> {{ order.item_count }} items
+                            </div>
+                            <div class="small">
+                                <i class="fas fa-weight-hanging me-1"></i> {{ "%.2f"|format(order.total_weight) }} kg
+                            </div>
+                        </div>
+                        <div class="col-md-2 text-md-end">
+                            <strong class="text-success d-block">RM{{ "%.2f"|format(order.total_price) }}</strong>
+                            <a href="{{ url_for('order_details', order_id=order.order_id) }}" 
+                               class="btn btn-sm btn-outline-primary mt-1">
+                                <i class="fas fa-eye"></i> View
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <!-- Order Items (Collapsible) -->
+                    {% if order['items'] and order['items']|length > 0 %}
+                    <div class="mt-3">
+                        <button class="btn btn-sm btn-outline-info" 
+                                type="button" 
+                                data-bs-toggle="collapse" 
+                                data-bs-target="#orderItems{{ order.order_id }}">
+                            <i class="fas fa-chevron-down"></i> Show Items ({{ order.item_count }})
+                        </button>
+                        
+                        <div class="collapse mt-2" id="orderItems{{ order.order_id }}">
+                            <div class="card card-body bg-light">
+                                <div class="row">
+                                    {% for item in order['items'] %}
+                                    <div class="col-md-6 col-lg-4 mb-2">
+                                        <div class="d-flex justify-content-between align-items-center border-bottom pb-1">
+                                            <span>{{ item.product_name }}</span>
+                                            <span class="badge bg-info">{{ item.quantity }}</span>
+                                        </div>
+                                        <div class="small text-muted">
+                                            RM{{ "%.2f"|format(item.price) }} × {{ item.quantity }} = RM{{ "%.2f"|format(item.price * item.quantity) }}
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="list-group-item text-center py-5">
+                    <i class="fas fa-clipboard-check fa-2x text-muted mb-3"></i>
+                    <h5>No Reserved Orders</h5>
+                    <p class="text-muted">Verified reserved orders will appear here for purchasing.</p>
+                    {% if summary.note %}
+                    <div class="alert alert-info mt-3">
+                        <small>{{ summary.note }}</small>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="fixed-bottom bg-white border-top p-3 d-flex justify-content-center gap-3">
+        <button type="button" class="btn btn-success btn-lg" onclick="generatePurchaseOrder()">
+            <i class="fas fa-file-invoice-dollar"></i> Generate Purchase Order
+        </button>
+        <button type="button" class="btn btn-primary btn-lg" onclick="exportReport()">
+            <i class="fas fa-file-export"></i> Export Report
+        </button>
+        <button type="button" class="btn btn-warning btn-lg" onclick="markAsOrdered()">
+            <i class="fas fa-check-double"></i> Mark as Ordered
+        </button>
+    </div>
+</div>
+
+<!-- JavaScript -->
+<script>
+function generatePurchaseOrder() {
+    if (!confirm('Generate purchase order for all reserved products?\n\nThis will create a summary for ordering.')) {
+        return;
+    }
+    
+    // Generate PO content
+    const poContent = `
+PURCHASE ORDER - {{ summary.date }}
+====================================
+
+Total Orders: {{ summary.total_orders }}
+Total Items: {{ summary.total_items }}
+Total Weight: {{ "%.2f"|format(summary.total_weight) }} kg
+Estimated Cost: RM{{ "%.2f"|format(summary.total_cost) }}
+
+PRODUCT LIST:
+-------------
+{% for product in product_summary %}
+{{ loop.index }}. {{ product.name }}
+   Quantity: {{ product.total_quantity }}
+   Weight: {{ "%.2f"|format(product.total_weight) }} kg
+   Price: RM{{ "%.2f"|format(product.price) }}
+   Total: RM{{ "%.2f"|format(product.total_cost) }}
+
+{% endfor %}
+
+ORDERS INCLUDED ({{ reserved_orders|length }}):
+--------------------------------
+{% for order in reserved_orders %}
+• {{ order.order_id }} - {{ order.customer_name }} ({{ order.item_count }} items)
+{% endfor %}
+
+Generated on: ${new Date().toLocaleString()}
+    `;
+    
+    // Show PO in new window
+    const poWindow = window.open('', '_blank');
+    poWindow.document.write(`
+        <html>
+            <head>
+                <title>Purchase Order - {{ summary.date }}</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 40px; }
+                    h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+                    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                    th { background-color: #f8f9fa; }
+                    .total { font-weight: bold; color: #27ae60; }
+                    .footer { margin-top: 40px; color: #7f8c8d; font-size: 12px; }
+                </style>
+            </head>
+            <body>
+                <h1>Purchase Order</h1>
+                <p>Date: ${new Date().toLocaleDateString()}</p>
+                
+                <h3>Summary</h3>
+                <table>
+                    <tr>
+                        <td>Total Orders:</td>
+                        <td>{{ summary.total_orders }}</td>
+                    </tr>
+                    <tr>
+                        <td>Total Items:</td>
+                        <td>{{ summary.total_items }}</td>
+                    </tr>
+                    <tr>
+                        <td>Total Weight:</td>
+                        <td>{{ "%.2f"|format(summary.total_weight) }} kg</td>
+                    </tr>
+                    <tr class="total">
+                        <td>Estimated Cost:</td>
+                        <td>RM{{ "%.2f"|format(summary.total_cost) }}</td>
+                    </tr>
+                </table>
+                
+                <h3>Products to Order</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Quantity</th>
+                            <th>Weight</th>
+                            <th>Unit Price</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in product_summary %}
+                        <tr>
+                            <td>{{ product.name }} (ID: {{ product.id }})</td>
+                            <td>{{ product.total_quantity }}</td>
+                            <td>{{ "%.2f"|format(product.total_weight) }} kg</td>
+                            <td>RM{{ "%.2f"|format(product.price) }}</td>
+                            <td>RM{{ "%.2f"|format(product.total_cost) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                
+                <div class="footer">
+                    Generated by Admin Panel v2.0<br>
+                    ${new Date().toLocaleString()}
+                </div>
+            </body>
+        </html>
+    `);
+    poWindow.document.close();
+    poWindow.focus();
+    
+    showToast('Purchase order generated!', 'success');
+}
+
+function exportReport() {
+    // Generate CSV
+    let csvContent = "Product,Quantity,Weight,Unit Price,Total Cost\n";
+    
+    {% for product in product_summary %}
+    csvContent += `"{{ product.name }}",{{ product.total_quantity }},{{ "%.2f"|format(product.total_weight) }},{{ product.price }},{{ product.total_cost }}\n`;
+    {% endfor %}
+    
+    csvContent += `\nTotal,,{{ "%.2f"|format(summary.total_weight) }},,{{ summary.total_cost }}`;
+    
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `reservation_report_${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    
+    showToast('Report exported as CSV!', 'success');
+}
+
+function markAsOrdered() {
+    if (!confirm('Mark all reserved products as ordered?\n\nThis will update the system that you have started purchasing these items.')) {
+        return;
+    }
+    
+    // Show loading
+    const btn = document.querySelector('[onclick="markAsOrdered()"]');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+    btn.disabled = true;
+    
+    // Send AJAX request
+    fetch('/admin/mark_reserved_as_ordered', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Marked as ordered successfully!', 'success');
+            // Reload after 2 seconds
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            showToast(data.error || 'Error updating status', 'danger');
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    })
+    .catch(error => {
+        showToast('Error: ' + error.message, 'danger');
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    });
+}
+
+function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = `position-fixed top-0 end-0 m-3 alert alert-${type} alert-dismissible fade show`;
+    toast.style.zIndex = '1060';
+    toast.innerHTML = `
+        <div class="d-flex align-items-center">
+            <div class="flex-grow-1">${message}</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.remove();
+        }
+    }, 4000);
+}
+</script>
+
+<style>
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+    .container-fluid {
+        padding-bottom: 100px; /* Space for fixed buttons */
+    }
+    
+    .fixed-bottom {
+        padding: 12px;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    
+    .fixed-bottom .btn-lg {
+        flex: 1 1 calc(50% - 5px);
+        min-width: 140px;
+        padding: 12px 8px;
+        font-size: 14px;
+    }
+    
+    .table-responsive {
+        font-size: 0.85rem;
+    }
+}
+
+/* Print styles */
+@media print {
+    .fixed-bottom, .btn-group {
+        display: none !important;
+    }
+    
+    .container-fluid {
+        padding: 0;
+    }
+}
+</style>
+{% endblock %}

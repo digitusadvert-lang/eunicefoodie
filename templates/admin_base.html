@@ -252,6 +252,10 @@
                        class="nav-link {% if request.endpoint == 'admin_settings' %}active{% endif %}">
                         <i class="fas fa-cog"></i> Settings
                     </a>
+                    <a class="nav-link active" href="{{ url_for('reservation_report') }}">
+                        <i class="fas fa-clipboard-check"></i> Order Report
+                        <span class="badge bg-warning ms-1">{{ reserved_count }}</span>
+                    </a>
                     <a class="nav-link" href="{{ url_for('admin_verify_payments') }}">
                         <i class="fas fa-money-check-alt"></i> Verify Payments
                         {% if pending_payments > 0 %}

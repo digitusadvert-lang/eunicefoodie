@@ -1,131 +1,199 @@
 <!-- templates/reservation_success.html -->
 {% extends "base.html" %}
+
 {% block title %}Order Reserved - {{ order.order_id }}{% endblock %}
 
 {% block content %}
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-lg-8">
-            <!-- Success Message -->
-            <div class="card border-success mb-4">
-                <div class="card-header bg-success text-white">
-                    <h4 class="mb-0"><i class="fas fa-check-circle"></i> Order Reserved Successfully!</h4>
+            <div class="card border-success shadow-lg">
+                <div class="card-header bg-success text-white text-center py-4">
+                    <div class="display-1 mb-3">
+                        <i class="fas fa-shopping-bag"></i>
+                    </div>
+                    <h1 class="card-title">Order Reserved Successfully!</h1>
                 </div>
-                <div class="card-body">
-                    <div class="text-center mb-4">
-                        <div class="display-1 text-success mb-3">
-                            <i class="fas fa-clock"></i>
-                        </div>
-                        <h3>Your Order is Reserved</h3>
-                        <p class="lead">Order ID: <strong>{{ order.order_id }}</strong></p>
+                
+                <div class="card-body text-center py-4">
+                    <div class="mb-4">
+                        <h3>Order {{ order.order_id }}</h3>
+                        <p class="lead">Thank you for your order, {{ order.customer_name }}!</p>
+                        <p>Your items have been reserved. Admin will contact you shortly.</p>
                     </div>
                     
-                    <div class="alert alert-info">
+                    <div class="alert alert-success mb-4">
+                        <h5><i class="fas fa-check-circle"></i> Reservation Confirmed</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Order ID:</strong> {{ order.order_id }}</p>
+                                <p><strong>Customer:</strong> {{ order.customer_name }}</p>
+                                <p><strong>Contact:</strong> +6{{ order.contact_number }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Shipping to:</strong></p>
+                                <p class="mb-0">{{ order.address }}<br>
+                                {{ order.postcode }} {{ order.state }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Order Summary -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0"><i class="fas fa-receipt"></i> Order Summary</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Product</th>
+                                            <th class="text-center">Quantity</th>
+                                            <th class="text-end">Price</th>
+                                            <th class="text-end">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in items %}
+                                        <tr>
+                                            <td>{{ item.product_name }}</td>
+                                            <td class="text-center">{{ item.quantity }}</td>
+                                            <td class="text-end">RM{{ "%.2f"|format(item.price) }}</td>
+                                            <td class="text-end">RM{{ "%.2f"|format(item.price * item.quantity) }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <td colspan="3" class="text-end"><strong>Subtotal:</strong></td>
+                                            <td class="text-end">RM{{ "%.2f"|format(order.total_price - order.shipping_fee) }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="3" class="text-end"><strong>Shipping Fee:</strong></td>
+                                            <td class="text-end">RM{{ "%.2f"|format(order.shipping_fee) }}</td>
+                                        </tr>
+                                        <tr class="table-success">
+                                            <td colspan="3" class="text-end"><strong>TOTAL:</strong></td>
+                                            <td class="text-end"><strong>RM{{ "%.2f"|format(order.total_price) }}</strong></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Important Information -->
+                    <div class="alert alert-info mb-4">
                         <h5><i class="fas fa-info-circle"></i> What Happens Next?</h5>
-                        <ol class="mb-0">
-                            <li>We've received your reservation for <strong>RM{{ "%.2f"|format(order.total_price) }}</strong></li>
-                            <li>Our admin will contact you via WhatsApp within 24 hours</li>
-                            <li>Admin will send you a payment link with payment instructions</li>
-                            <li>You'll make payment and upload receipt</li>
-                            <li>We'll verify payment and ship your order</li>
-                            <li>You'll receive tracking number via WhatsApp</li>
-                        </ol>
+                        <div class="row text-start">
+                            <div class="col-md-6">
+                                <div class="card border-0 bg-light mb-3">
+                                    <div class="card-body">
+                                        <h6><i class="fas fa-user-check text-primary"></i> Order Processing</h6>
+                                        <p class="mb-0">Admin will check stock availability and prepare your order.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card border-0 bg-light mb-3">
+                                    <div class="card-body">
+                                        <h6><i class="fab fa-whatsapp text-success"></i> Payment Link</h6>
+                                        <p class="mb-0">You'll receive payment link via WhatsApp when order is ready.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card border-0 bg-light mb-3">
+                                    <div class="card-body">
+                                        <h6><i class="fas fa-phone-alt text-info"></i> Contact Info</h6>
+                                        <p class="mb-0">Admin: {{ settings.admin_whatsapp_number }}</p>
+                                        <p class="mb-0">Your WhatsApp: +6{{ order.contact_number }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card border-0 bg-light mb-3">
+                                    <div class="card-body">
+                                        <h6><i class="fas fa-clock text-warning"></i> Timeline</h6>
+                                        <p class="mb-0">Payment link will be sent within 1-3 business days.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
-                    <div class="row mt-4">
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-header bg-light">
-                                    <h6 class="mb-0"><i class="fas fa-user"></i> Your Details</h6>
-                                </div>
-                                <div class="card-body">
-                                    <p><strong>Name:</strong> {{ order.customer_name }}</p>
-                                    <p><strong>Phone:</strong> +6{{ order.contact_number }}</p>
-                                    <p><strong>Order Total:</strong> RM{{ "%.2f"|format(order.total_price) }}</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-header bg-light">
-                                    <h6 class="mb-0"><i class="fas fa-question-circle"></i> Need Help?</h6>
-                                </div>
-                                <div class="card-body">
-                                    <p>If admin doesn't contact you within 24 hours:</p>
-                                    <a href="{{ whatsapp_link }}" target="_blank" class="btn btn-success w-100 mb-2">
-                                        <i class="fab fa-whatsapp"></i> WhatsApp Admin
-                                    </a>
-                                    <a href="{{ url_for('user_products') }}" class="btn btn-outline-primary w-100">
-                                        <i class="fas fa-store"></i> Continue Shopping
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
+                    <!-- Contact Admin Button -->
+                    <div class="mb-4">
+                        <a href="{{ whatsapp_link }}" target="_blank" class="btn btn-success btn-lg">
+                            <i class="fab fa-whatsapp"></i> Contact Admin on WhatsApp
+                        </a>
+                        <p class="text-muted mt-2">
+                            <small>Pre-filled message: "Hi, I've placed order {{ order.order_id }}..."</small>
+                        </p>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('user_products') }}" class="btn btn-primary">
+                            <i class="fas fa-shopping-bag"></i> Continue Shopping
+                        </a>
+                        <button class="btn btn-outline-secondary" onclick="window.print()">
+                            <i class="fas fa-print"></i> Print Order Details
+                        </button>
                     </div>
                 </div>
-            </div>
-            
-            <!-- Order Summary -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-receipt"></i> Order Summary</h5>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>Product</th>
-                                    <th class="text-center">Quantity</th>
-                                    <th class="text-end">Price</th>
-                                    <th class="text-end">Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for item in items %}
-                                <tr>
-                                    <td>{{ item.product_name }}</td>
-                                    <td class="text-center">{{ item.quantity }}</td>
-                                    <td class="text-end">RM{{ "%.2f"|format(item.price) }}</td>
-                                    <td class="text-end">RM{{ "%.2f"|format(item.price * item.quantity) }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                            <tfoot>
-                                <tr>
-                                    <td colspan="3" class="text-end"><strong>Subtotal:</strong></td>
-                                    <td class="text-end">RM{{ "%.2f"|format(order.total_price - order.shipping_fee) }}</td>
-                                </tr>
-                                <tr>
-                                    <td colspan="3" class="text-end"><strong>Shipping Fee:</strong></td>
-                                    <td class="text-end">RM{{ "%.2f"|format(order.shipping_fee) }}</td>
-                                </tr>
-                                <tr class="table-success">
-                                    <td colspan="3" class="text-end"><strong>Total Amount:</strong></td>
-                                    <td class="text-end"><strong>RM{{ "%.2f"|format(order.total_price) }}</strong></td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Important Notes -->
-            <div class="card border-warning">
-                <div class="card-header bg-warning">
-                    <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Important Notes</h5>
-                </div>
-                <div class="card-body">
-                    <ul class="mb-0">
-                        <li>Your order is <strong>reserved but not confirmed</strong> until payment is made</li>
-                        <li>Items are held for <strong>48 hours</strong> pending payment</li>
-                        <li>Admin will contact you at <strong>+6{{ order.contact_number }}</strong></li>
-                        <li>Please ensure your WhatsApp is active</li>
-                        <li>Payment link will be sent via WhatsApp</li>
-                    </ul>
+                
+                <div class="card-footer text-center bg-light py-3">
+                    <p class="mb-0">
+                        <i class="fas fa-calendar-check"></i> 
+                        Reserved on {{ order.created_at|datetimeformat }}
+                    </p>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+.card {
+    border-radius: 15px;
+    overflow: hidden;
+}
+
+.display-1 {
+    font-size: 5rem;
+}
+
+.alert {
+    border-radius: 10px;
+    border: none;
+}
+
+.table th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+}
+
+.card.border-0 {
+    border: none !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.card.border-0:hover {
+    transform: translateY(-2px);
+    transition: transform 0.2s;
+}
+
+@media (max-width: 768px) {
+    .display-1 {
+        font-size: 3.5rem;
+    }
+    
+    .btn-lg {
+        font-size: 1rem;
+        padding: 0.75rem 1rem;
+    }
+}
+</style>
 {% endblock %}

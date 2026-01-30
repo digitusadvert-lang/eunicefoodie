@@ -3,49 +3,346 @@
 {% block title %}Manage Orders - Admin{% endblock %}
 
 {% block content %}
-<h1 class="mb-4">📋 Manage Orders</h1>
+<div class="container-fluid py-3">
+    <!-- Mobile Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
+        <div>
+            <h1 class="h4 mb-1">
+                <i class="fas fa-clipboard-list me-2"></i>Manage Orders
+            </h1>
+            <p class="text-muted small mb-0">
+                Total: {{ orders|length }} | 
+                <span class="text-success">✓ {{ orders|selectattr('payment_status', 'equalto', 'verified')|list|length }}</span> | 
+                <span class="text-warning">⏳ {{ orders|selectattr('payment_status', 'equalto', 'pending_verification')|list|length }}</span>
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <div class="dropdown">
+                <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="fas fa-filter"></i> Filter
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{{ url_for('admin_orders') }}">All Orders</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#" onclick="filterStatus('pending_verification')">Pending Verification</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="filterStatus('verified')">Verified</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="filterStatus('pending')">Awaiting Payment</a></li>
+                </ul>
+            </div>
+            <a href="{{ url_for('admin_dashboard') }}" class="btn btn-sm btn-secondary">
+                <i class="fas fa-arrow-left"></i>
+                <span class="d-none d-sm-inline">Back</span>
+            </a>
+        </div>
+    </div>
 
-<div class="table-responsive">
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Order ID</th>
-                <th>Customer</th>
-                <th>Items</th>
-                <th>Total (RM)</th>
-                <th>Shipping</th>
-                <th>State</th>
-                <th>Date</th>
-                <th>Status</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for order in orders %}
-            <tr>
-                <td>{{ order.order_id }}</td>
-                <td>{{ order.customer_name }}</td>
-                <td>{{ order.item_count }}</td>
-                <td>RM{{ "%.2f"|format(order.total_price) }}</td>
-                <td>RM{{ "%.2f"|format(order.shipping_fee) }}</td>
-                <td>{{ order.state }}</td>
-                <td>{{ order.created_at[:10] }}</td>
-                <td>
-                    <span class="badge bg-{{ 'success' if order.status == 'completed' else 'warning' }}">
-                        {{ order.status }}
-                    </span>
-                </td>
-                <td>
+    <!-- Mobile Stats Cards -->
+    <div class="row g-2 mb-3">
+        <div class="col-3">
+            <div class="card border-start border-primary border-4">
+                <div class="card-body py-2 px-2">
+                    <h6 class="text-primary mb-0">{{ orders|length }}</h6>
+                    <small class="text-muted">Total</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-3">
+            <div class="card border-start border-warning border-4">
+                <div class="card-body py-2 px-2">
+                    <h6 class="text-warning mb-0">{{ orders|selectattr('payment_status', 'equalto', 'pending_verification')|list|length }}</h6>
+                    <small class="text-muted">Pending</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-3">
+            <div class="card border-start border-success border-4">
+                <div class="card-body py-2 px-2">
+                    <h6 class="text-success mb-0">{{ orders|selectattr('payment_status', 'equalto', 'verified')|list|length }}</h6>
+                    <small class="text-muted">Verified</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-3">
+            <div class="card border-start border-info border-4">
+                <div class="card-body py-2 px-2">
+                    <h6 class="text-info mb-0">{{ orders|selectattr('status', 'equalto', 'shipped')|list|length }}</h6>
+                    <small class="text-muted">Shipped</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Search (Optional) -->
+    <div class="mb-3">
+        <input type="search" class="form-control form-control-sm" 
+               placeholder="🔍 Search orders..." 
+               oninput="quickSearch()" 
+               id="orderSearch">
+    </div>
+
+    <!-- Mobile Orders List -->
+    <div id="ordersList">
+        {% for order in orders %}
+        <div class="card order-card mb-3" 
+             data-status="{{ order.status }}" 
+             data-payment="{{ order.payment_status }}"
+             data-orderid="{{ order.order_id }}">
+            <div class="card-body">
+                <!-- Header -->
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <h6 class="mb-0">{{ order.order_id }}</h6>
+                        <small class="text-muted">{{ order.region|title }}</small>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge {% if order.status == 'completed' %}bg-success{% elif order.status == 'shipped' %}bg-info{% elif order.status == 'cancelled' %}bg-danger{% elif order.status == 'confirmed' %}bg-primary{% else %}bg-warning{% endif %}">
+                            {{ order.status|title }}
+                        </span>
+                    </div>
+                </div>
+                
+                <!-- Customer Info -->
+                <div class="mb-2">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-user me-2 text-muted small"></i>
+                        <span class="fw-medium">{{ order.customer_name }}</span>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-phone me-2 text-muted small"></i>
+                        <small class="text-muted">+6{{ order.contact_number }}</small>
+                    </div>
+                </div>
+                
+                <!-- Order Details -->
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <div class="bg-light rounded p-2 text-center">
+                            <small class="text-muted d-block">Items</small>
+                            <span class="fw-bold">{{ order.item_count }}</span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="bg-light rounded p-2 text-center">
+                            <small class="text-muted d-block">Amount</small>
+                            <span class="fw-bold">RM{{ "%.2f"|format(order.total_price) }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Payment & Date -->
+                <div class="d-flex justify-content-between align-items-center border-top pt-2">
+                    <div>
+                        <span class="badge {% if order.payment_status == 'verified' %}bg-success{% elif order.payment_status == 'rejected' %}bg-danger{% elif order.payment_status == 'pending_verification' %}bg-warning{% else %}bg-secondary{% endif %}">
+                            {{ order.payment_status|title }}
+                        </span>
+                        {% if order.payment_method %}
+                        <small class="text-muted ms-1">{{ order.payment_method|truncate(10) }}</small>
+                        {% endif %}
+                    </div>
+                    <small class="text-muted">{{ order.created_at|datetimeformat('short') }}</small>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="d-flex justify-content-between gap-1 mt-3">
                     <a href="{{ url_for('order_details', order_id=order.order_id) }}" 
-                       class="btn btn-sm btn-info">View</a>
-                </td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="9" class="text-center">No orders found</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+                       class="btn btn-sm btn-outline-primary flex-fill">
+                        <i class="fas fa-eye"></i>
+                        <span class="d-none d-sm-inline">View</span>
+                    </a>
+                    
+                    <a href="{{ url_for('edit_order_items', order_id=order.order_id) }}" 
+                       class="btn btn-sm btn-outline-warning flex-fill">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span class="d-none d-sm-inline">Items</span>
+                    </a>
+                    
+                    {% if order.payment_status == 'pending' %}
+                    <a href="{{ url_for('send_payment_link', order_id=order.order_id) }}" 
+                       class="btn btn-sm btn-outline-info flex-fill"
+                       onclick="return confirm('Send payment link for {{ order.order_id }}?')">
+                        <i class="fas fa-link"></i>
+                        <span class="d-none d-sm-inline">Pay Link</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if order.status != 'cancelled' and order.status != 'completed' %}
+                    <a href="{{ url_for('cancel_order', order_id=order.order_id) }}" 
+                       class="btn btn-sm btn-outline-danger flex-fill"
+                       onclick="return confirm('Cancel order {{ order.order_id }}?')">
+                        <i class="fas fa-times"></i>
+                        <span class="d-none d-sm-inline">Cancel</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+            <h5>No Orders Found</h5>
+            <p class="text-muted">When customers place orders, they will appear here.</p>
+            <a href="{{ url_for('admin_dashboard') }}" class="btn btn-primary">
+                <i class="fas fa-home"></i> Go to Dashboard
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Footer Stats -->
+    <div class="card bg-light mt-3">
+        <div class="card-body py-2">
+            <div class="d-flex justify-content-between align-items-center">
+                <small class="text-muted">
+                    {{ orders|length }} orders
+                </small>
+                <small class="text-muted">
+                    Revenue: <strong class="text-success">RM{{ orders|selectattr('payment_status', 'equalto', 'verified')|sum(attribute='total_price')|default(0)|round(2) }}</strong>
+                </small>
+            </div>
+        </div>
+    </div>
 </div>
+
+<!-- JavaScript for Mobile -->
+<script>
+// Mobile Filter Function
+function filterStatus(status) {
+    const cards = document.querySelectorAll('.order-card');
+    let visibleCount = 0;
+    
+    cards.forEach(card => {
+        const cardStatus = card.getAttribute('data-status');
+        const cardPayment = card.getAttribute('data-payment');
+        
+        if (status === 'all' || 
+            cardStatus.includes(status.toLowerCase()) || 
+            cardPayment.includes(status.toLowerCase())) {
+            card.style.display = '';
+            visibleCount++;
+        } else {
+            card.style.display = 'none';
+        }
+    });
+    
+    // Show message if no results
+    const noOrdersMsg = document.querySelector('#ordersList .text-center');
+    if (noOrdersMsg && visibleCount === 0) {
+        noOrdersMsg.style.display = '';
+    } else if (noOrdersMsg) {
+        noOrdersMsg.style.display = 'none';
+    }
+    
+    // Update footer count
+    const footer = document.querySelector('.bg-light small');
+    if (footer) {
+        footer.textContent = visibleCount + ' orders';
+    }
+    
+    return false;
+}
+
+// Quick Search
+function quickSearch() {
+    const searchInput = document.getElementById('orderSearch');
+    if (!searchInput) return;
+    
+    const searchTerm = searchInput.value.toLowerCase();
+    const cards = document.querySelectorAll('.order-card');
+    
+    cards.forEach(card => {
+        const orderId = card.getAttribute('data-orderid').toLowerCase();
+        const customerName = card.querySelector('.fw-medium')?.textContent.toLowerCase() || '';
+        const phone = card.querySelector('.text-muted')?.textContent.toLowerCase() || '';
+        
+        if (orderId.includes(searchTerm) || 
+            customerName.includes(searchTerm) || 
+            phone.includes(searchTerm)) {
+            card.style.display = '';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    // Add filter handlers
+    document.querySelectorAll('.dropdown-item[href="#"]').forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            const filterText = this.textContent.trim();
+            const filterMap = {
+                'Pending Verification': 'pending_verification',
+                'Verified': 'verified',
+                'Awaiting Payment': 'pending',
+                'All Orders': 'all'
+            };
+            
+            if (filterMap[filterText]) {
+                filterStatus(filterMap[filterText]);
+            }
+        });
+    });
+});
+</script>
+
+<style>
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+    .container-fluid {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+    
+    .order-card {
+        border-radius: 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        border: 1px solid #e0e0e0;
+    }
+    
+    .card-body {
+        padding: 16px;
+    }
+    
+    .btn-sm {
+        padding: 5px 8px;
+        font-size: 12px;
+    }
+    
+    .badge {
+        font-size: 11px;
+        padding: 4px 8px;
+    }
+    
+    h1 {
+        font-size: 1.4rem;
+    }
+    
+    /* Better touch targets */
+    .btn {
+        min-height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    /* Hide labels on very small screens */
+    @media (max-width: 360px) {
+        .btn span {
+            display: none;
+        }
+        
+        .btn i {
+            margin: 0 !important;
+        }
+    }
+}
+
+/* Desktop Styles */
+@media (min-width: 768px) {
+    .order-card {
+        max-width: 100%;
+    }
+}
+</style>
 {% endblock %}

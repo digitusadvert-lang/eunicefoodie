@@ -1,82 +1,702 @@
 <!-- templates/order_details.html -->
 {% extends "admin_base.html" %}
-{% block title %}Order Details - Admin{% endblock %}
+{% block title %}Order Details - {{ order.order_id }}{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1>📦 Order Details: {{ order.order_id }}</h1>
-    <a href="{{ url_for('admin_orders') }}" class="btn btn-secondary">← Back to Orders</a>
+<div class="container-fluid py-3">
+    <!-- Mobile Header -->
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center mb-4 gap-2">
+        <div>
+            <div class="d-flex align-items-center mb-2">
+                <a href="{{ url_for('admin_orders') }}" class="btn btn-sm btn-outline-secondary me-2">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+                <h1 class="h4 mb-0">Order: {{ order.order_id }}</h1>
+            </div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0" style="font-size: 0.85rem;">
+                    <li class="breadcrumb-item"><a href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('admin_orders') }}">Orders</a></li>
+                    <li class="breadcrumb-item active">{{ order.order_id|truncate(10) }}</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="mt-2 mt-sm-0">
+            <span class="badge fs-6 bg-{% if order.payment_status == 'verified' %}success{% elif order.payment_status == 'rejected' %}danger{% elif order.payment_status == 'pending_verification' %}warning{% else %}secondary{% endif %}">
+                RM{{ "%.2f"|format(order.total_price) }}
+            </span>
+        </div>
+    </div>
+
+    <!-- Status Alert - Mobile Optimized -->
+    <div class="card mb-3 border-{% if order.payment_status == 'verified' %}success{% elif order.payment_status == 'rejected' %}danger{% elif order.payment_status == 'pending_verification' %}warning{% else %}info{% endif %}">
+        <div class="card-body py-2">
+            <div class="d-flex align-items-center">
+                <div class="flex-shrink-0 me-3">
+                    <i class="fas fa-{% if order.payment_status == 'verified' %}check-circle text-success{% elif order.payment_status == 'rejected' %}times-circle text-danger{% elif order.payment_status == 'pending_verification' %}clock text-warning{% else %}info-circle text-info{% endif %} fa-lg"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <h6 class="mb-1">{{ order.status|title }} | {{ order.payment_status|title }}</h6>
+                    <p class="mb-0 small">
+                        {% if order.payment_status == 'verified' %}
+                            ✅ Payment verified {{ order.payment_verified_at|datetimeformat('short') if order.payment_verified_at else '' }}
+                        {% elif order.payment_status == 'pending_verification' %}
+                            ⏳ Awaiting payment verification
+                        {% elif order.payment_status == 'rejected' %}
+                            ❌ Payment rejected
+                        {% else %}
+                            📋 Awaiting payment
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Messages -->
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-success alert-dismissible fade show mb-3 py-2">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <span class="small">{{ message }}</span>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+                </div>
+            </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Mobile Tabs Navigation -->
+    <div class="mb-4">
+        <ul class="nav nav-tabs nav-fill" id="orderTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="items-tab" data-bs-toggle="tab" data-bs-target="#items" type="button" role="tab">
+                    <i class="fas fa-boxes d-block d-sm-inline"></i>
+                    <span class="d-none d-sm-inline"> Items</span>
+                    <span class="badge bg-primary ms-1">{{ items|length }}</span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="customer-tab" data-bs-toggle="tab" data-bs-target="#customer" type="button" role="tab">
+                    <i class="fas fa-user d-block d-sm-inline"></i>
+                    <span class="d-none d-sm-inline"> Customer</span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="actions-tab" data-bs-toggle="tab" data-bs-target="#actions" type="button" role="tab">
+                    <i class="fas fa-cogs d-block d-sm-inline"></i>
+                    <span class="d-none d-sm-inline"> Actions</span>
+                </button>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Tabs Content -->
+    <div class="tab-content" id="orderTabsContent">
+        <!-- TAB 1: Order Items -->
+        <div class="tab-pane fade show active" id="items" role="tabpanel">
+            <!-- Order Items Card - Mobile Optimized -->
+            <div class="card mb-4">
+                <div class="card-header bg-light py-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">
+                            <i class="fas fa-boxes"></i> Order Items
+                        </h6>
+                        <div class="d-flex gap-2">
+                            <span class="badge bg-info">{{ items|sum(attribute='quantity') }} items</span>
+                            <a href="{{ url_for('edit_order_items', order_id=order.order_id) }}" 
+                               class="btn btn-warning btn-sm">
+                                <i class="fas fa-edit"></i>
+                                <span class="d-none d-sm-inline"> Edit</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <!-- Mobile Items List -->
+                    <div class="list-group list-group-flush">
+                        {% for item in items %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <div class="d-flex align-items-center mb-1">
+                                        <span class="badge bg-secondary me-2">#{{ loop.index }}</span>
+                                        <strong>{{ item.product_name }}</strong>
+                                    </div>
+                                    <small class="text-muted">
+                                        Unit price: RM{{ "%.2f"|format(item.price) }}
+                                    </small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-info rounded-pill">{{ item.quantity }}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <div class="bg-light rounded p-2 text-center">
+                                        <small class="text-muted d-block">Weight</small>
+                                        <strong>{{ item.weight }}kg</strong>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="bg-light rounded p-2 text-center">
+                                        <small class="text-muted d-block">Total</small>
+                                        <strong class="text-success">RM{{ "%.2f"|format(item.price * item.quantity) }}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        
+                        <!-- Order Summary -->
+                        <div class="list-group-item bg-light">
+                            <!-- Subtotal -->
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span>Subtotal:</span>
+                                <div class="text-end">
+                                    <div>{{ items|sum(attribute='weight')|round(2) }}kg</div>
+                                    <strong>RM{{ "%.2f"|format(order.total_price - order.shipping_fee) }}</strong>
+                                </div>
+                            </div>
+                            
+                            <!-- Shipping -->
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span>Shipping ({{ order.region|title }}):</span>
+                                <strong>RM{{ "%.2f"|format(order.shipping_fee) }}</strong>
+                            </div>
+                            
+                            <!-- Grand Total -->
+                            <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                                <span class="fw-bold fs-5">GRAND TOTAL:</span>
+                                <strong class="text-success fs-5">RM{{ "%.2f"|format(order.total_price) }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment Information - Mobile Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-light py-2">
+                    <h6 class="mb-0">
+                        <i class="fas fa-money-check-alt"></i> Payment Information
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-muted">Method:</span>
+                                <span class="badge bg-primary">{{ order.payment_method or 'Not selected' }}</span>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="text-muted">Status:</span>
+                                <span class="badge bg-{% if order.payment_status == 'verified' %}success{% elif order.payment_status == 'rejected' %}danger{% elif order.payment_status == 'pending_verification' %}warning{% else %}secondary{% endif %}">
+                                    {{ order.payment_status|title }}
+                                </span>
+                            </div>
+                            
+                            {% if order.payment_receipt %}
+                            <div class="d-grid gap-2">
+                                <span class="text-muted small">Receipt:</span>
+                                <a href="{{ url_for('static', filename='receipts/' + order.payment_receipt) }}" 
+                                   target="_blank" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-eye me-1"></i> View
+                                </a>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-warning py-2 mb-0">
+                                <i class="fas fa-exclamation-triangle"></i> No receipt uploaded
+                            </div>
+                            {% endif %}
+                            
+                            {% if order.tracking_number %}
+                            <div class="mt-3">
+                                <span class="text-muted small d-block">Tracking:</span>
+                                <code class="bg-light p-2 rounded d-block mt-1">{{ order.tracking_number }}</code>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: Customer Information -->
+        <div class="tab-pane fade" id="customer" role="tabpanel">
+            <div class="card mb-4">
+                <div class="card-header bg-light py-2">
+                    <h6 class="mb-0">
+                        <i class="fas fa-user"></i> Customer Details
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <!-- Customer Info -->
+                    <div class="mb-3">
+                        <span class="text-muted small d-block">Name:</span>
+                        <strong class="fs-5">{{ order.customer_name }}</strong>
+                    </div>
+                    
+                    <!-- Contact -->
+                    <div class="mb-3">
+                        <span class="text-muted small d-block">Contact:</span>
+                        <div class="d-flex align-items-center">
+                            <i class="fab fa-whatsapp text-success me-2"></i>
+                            <strong>+6{{ order.contact_number }}</strong>
+                        </div>
+                        <div class="d-grid gap-2 mt-2">
+                            <button class="btn btn-sm btn-success" 
+                                    onclick="whatsappCustomer('{{ order.contact_number }}', 'order_update')">
+                                <i class="fab fa-whatsapp me-1"></i> WhatsApp
+                            </button>
+                            <button class="btn btn-sm btn-outline-info" 
+                                    onclick="whatsappCustomer('{{ order.contact_number }}', 'payment_link')">
+                                <i class="fas fa-link me-1"></i> Payment Link
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Address -->
+                    <div class="mb-3">
+                        <span class="text-muted small d-block">Shipping Address:</span>
+                        <div class="bg-light p-3 rounded mt-1">
+                            {{ order.address }}<br>
+                            {{ order.postcode }} {{ order.state }}<br>
+                            <small class="text-muted">({{ order.region|title }} Malaysia)</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Dates -->
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <span class="text-muted small d-block">Order Date:</span>
+                            <small>{{ order.created_at|datetimeformat('short') }}</small>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-muted small d-block">Last Updated:</span>
+                            <small>{{ order.updated_at|datetimeformat('short') if order.updated_at else 'N/A' }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Timeline -->
+            <div class="card">
+                <div class="card-header bg-light py-2">
+                    <h6 class="mb-0">
+                        <i class="fas fa-history"></i> Order Timeline
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="timeline-mobile">
+                        <!-- Step 1 -->
+                        <div class="timeline-step {% if order.status == 'reserved' or order.status == 'confirmed' or order.status == 'shipped' or order.status == 'completed' %}completed{% endif %}">
+                            <div class="timeline-icon bg-success">
+                                <i class="fas fa-shopping-cart"></i>
+                            </div>
+                            <div class="timeline-content">
+                                <small>Order Reserved</small>
+                                <small class="text-muted d-block">{{ order.created_at|datetimeformat('short') }}</small>
+                            </div>
+                        </div>
+                        
+                        <!-- Step 2 -->
+                        <div class="timeline-step {% if order.payment_status == 'verified' or order.status == 'confirmed' or order.status == 'shipped' or order.status == 'completed' %}completed{% elif order.payment_status == 'pending_verification' %}active{% endif %}">
+                            <div class="timeline-icon {% if order.payment_status == 'verified' %}bg-success{% elif order.payment_status == 'pending_verification' %}bg-warning{% else %}bg-secondary{% endif %}">
+                                <i class="fas fa-money-check-alt"></i>
+                            </div>
+                            <div class="timeline-content">
+                                <small>Payment {% if order.payment_status == 'verified' %}Verified{% elif order.payment_status == 'pending_verification' %}Pending{% else %}Pending{% endif %}</small>
+                                <small class="text-muted d-block">
+                                    {% if order.payment_status == 'verified' %}
+                                        {{ order.payment_verified_at|datetimeformat('short') if order.payment_verified_at else 'Verified' }}
+                                    {% elif order.payment_status == 'pending_verification' %}
+                                        Awaiting verification
+                                    {% else %}
+                                        Not yet submitted
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <!-- Step 3 -->
+                        <div class="timeline-step {% if order.status == 'shipped' or order.status == 'completed' %}completed{% endif %}">
+                            <div class="timeline-icon {% if order.status == 'shipped' or order.status == 'completed' %}bg-info{% else %}bg-secondary{% endif %}">
+                                <i class="fas fa-truck"></i>
+                            </div>
+                            <div class="timeline-content">
+                                <small>Order Shipped</small>
+                                <small class="text-muted d-block">
+                                    {% if order.tracking_number %}
+                                        {{ order.tracking_number|truncate(15) }}
+                                    {% else %}
+                                        Not yet shipped
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <!-- Step 4 -->
+                        <div class="timeline-step {% if order.status == 'completed' %}completed{% endif %}">
+                            <div class="timeline-icon {% if order.status == 'completed' %}bg-success{% else %}bg-secondary{% endif %}">
+                                <i class="fas fa-check-double"></i>
+                            </div>
+                            <div class="timeline-content">
+                                <small>Order Completed</small>
+                                <small class="text-muted d-block">
+                                    {% if order.status == 'completed' %}
+                                        Delivered
+                                    {% else %}
+                                        In progress
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: Actions -->
+        <div class="tab-pane fade" id="actions" role="tabpanel">
+            <div class="card">
+                <div class="card-header bg-light py-2">
+                    <h6 class="mb-0">
+                        <i class="fas fa-cogs"></i> Order Actions
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <!-- EDIT ITEMS -->
+                        <a href="{{ url_for('edit_order_items', order_id=order.order_id) }}" 
+                           class="btn btn-warning">
+                            <i class="fas fa-shopping-cart me-1"></i> Edit Items
+                        </a>
+                        
+                        <!-- EDIT CUSTOMER -->
+                        <a href="{{ url_for('edit_order', order_id=order.order_id) }}" 
+                           class="btn btn-outline-warning">
+                            <i class="fas fa-user-edit me-1"></i> Edit Details
+                        </a>
+                        
+                        <!-- PAYMENT LINK -->
+                        <a href="{{ url_for('send_payment_link', order_id=order.order_id) }}" 
+                           class="btn btn-info" 
+                           onclick="return confirm('Generate payment link for order {{ order.order_id }}?')">
+                            <i class="fas fa-link me-1"></i> Payment Link
+                        </a>
+                        
+                        <!-- VERIFY PAYMENT -->
+                        {% if order.payment_status == 'pending_verification' %}
+                        <a href="{{ url_for('admin_verify_payments') }}" 
+                           class="btn btn-success">
+                            <i class="fas fa-check-circle me-1"></i> Verify Payment
+                        </a>
+                        {% endif %}
+                        
+                        <!-- ADD TRACKING -->
+                        {% if order.status != 'shipped' and order.payment_status == 'verified' %}
+                        <button type="button" class="btn btn-primary" 
+                                onclick="addTracking('{{ order.order_id }}')">
+                            <i class="fas fa-truck me-1"></i> Add Tracking
+                        </button>
+                        {% endif %}
+                        
+                        <!-- MARK COMPLETED -->
+                        {% if order.status != 'completed' %}
+                        <a href="{{ url_for('complete_order', order_id=order.order_id) }}" 
+                           class="btn btn-success"
+                           onclick="return confirm('Mark order {{ order.order_id }} as completed?')">
+                            <i class="fas fa-check-double me-1"></i> Mark Completed
+                        </a>
+                        {% endif %}
+                        
+                        <!-- CANCEL ORDER -->
+                        {% if order.status != 'cancelled' %}
+                        <a href="{{ url_for('cancel_order', order_id=order.order_id) }}" 
+                           class="btn btn-danger"
+                           onclick="return confirm('Cancel order {{ order.order_id }}?')">
+                            <i class="fas fa-times me-1"></i> Cancel Order
+                        </a>
+                        {% endif %}
+                        
+                        <!-- DELETE ORDER -->
+                        <a href="{{ url_for('delete_order', order_id=order.order_id) }}" 
+                           class="btn btn-outline-danger"
+                           onclick="return confirmDelete('{{ order.order_id }}')">
+                            <i class="fas fa-trash me-1"></i> Delete Order
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
-<div class="row">
-    <div class="col-md-8">
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5>Order Items</h5>
-            </div>
-            <div class="card-body">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Product</th>
-                            <th>Price</th>
-                            <th>Quantity</th>
-                            <th>Weight</th>
-                            <th>Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in items %}
-                        <tr>
-                            <td>{{ item.product_name }}</td>
-                            <td>RM{{ "%.2f"|format(item.price) }}</td>
-                            <td>{{ item.quantity }}</td>
-                            <td>{{ item.weight }}kg</td>
-                            <td>RM{{ "%.2f"|format(item.price * item.quantity) }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+<!-- JavaScript -->
+<script>
+function whatsappCustomer(phone, type) {
+    let message = '';
+    const orderId = '{{ order.order_id }}';
+    const customerName = '{{ order.customer_name }}';
+    const totalPrice = '{{ "%.2f"|format(order.total_price) }}';
     
-    <div class="col-md-4">
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5>Order Summary</h5>
-            </div>
-            <div class="card-body">
-                <ul class="list-group list-group-flush">
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span>Subtotal</span>
-                        <span>RM{{ "%.2f"|format(order.total_price - order.shipping_fee) }}</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span>Shipping Fee</span>
-                        <span>RM{{ "%.2f"|format(order.shipping_fee) }}</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between">
-                        <strong>Total</strong>
-                        <strong>RM{{ "%.2f"|format(order.total_price) }}</strong>
-                    </li>
-                </ul>
-            </div>
-        </div>
-        
-        <div class="card">
-            <div class="card-header">
-                <h5>Customer Information</h5>
-            </div>
-            <div class="card-body">
-                <p><strong>Name:</strong> {{ order.customer_name }}</p>
-                <p><strong>Address:</strong><br>{{ order.address }}</p>
-                <p><strong>Postcode:</strong> {{ order.postcode }}</p>
-                <p><strong>State:</strong> {{ order.state }}</p>
-                <p><strong>Region:</strong> {{ order.region|title }} Malaysia</p>
-                <p><strong>Order Date:</strong> {{ order.created_at }}</p>
-            </div>
-        </div>
-    </div>
-</div>
+    if (type === 'payment_link') {
+        message = `Hi ${customerName}, your order ${orderId} for RM${totalPrice} is ready for payment. Please use this link: {{ request.host_url }}payment/${orderId}`;
+    } else {
+        message = `Hi ${customerName}, regarding your order ${orderId}.`;
+    }
+    
+    const url = `https://wa.me/6${phone}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
+}
+
+function addTracking(orderId) {
+    const trackingNumber = prompt('Enter tracking number for order ' + orderId + ':');
+    if (trackingNumber && trackingNumber.trim() !== '') {
+        fetch(`/admin/orders/add_tracking/${orderId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `tracking_number=${encodeURIComponent(trackingNumber.trim())}`
+        })
+        .then(response => {
+            if (response.ok) {
+                location.reload();
+            }
+        });
+    }
+}
+
+function confirmDelete(orderId) {
+    return confirm(
+        `⚠️ DELETE ORDER ${orderId}?\n\n` +
+        `This will PERMANENTLY DELETE:\n` +
+        `• Order details\n` +
+        `• Order items\n` +
+        `• Payment info\n` +
+        `• Customer data\n\n` +
+        `This action CANNOT BE UNDONE!`
+    );
+}
+
+// Auto-dismiss alerts
+setTimeout(() => {
+    document.querySelectorAll('.alert').forEach(alert => {
+        const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+        setTimeout(() => bsAlert.close(), 4000);
+    });
+}, 3000);
+
+// Initialize tabs for mobile
+document.addEventListener('DOMContentLoaded', function() {
+    // Activate first tab by default
+    const firstTab = new bootstrap.Tab(document.getElementById('items-tab'));
+    firstTab.show();
+});
+</script>
+
+<style>
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+    .container-fluid {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+    
+    h1 {
+        font-size: 1.3rem;
+    }
+    
+    .breadcrumb {
+        font-size: 0.8rem;
+        margin-bottom: 0;
+    }
+    
+    /* Tab Navigation */
+    .nav-tabs .nav-link {
+        padding: 10px 8px;
+        font-size: 0.85rem;
+    }
+    
+    .nav-tabs .nav-link i {
+        font-size: 1rem;
+    }
+    
+    /* Cards */
+    .card {
+        border-radius: 8px;
+        margin-bottom: 16px;
+        border: 1px solid #e0e0e0;
+    }
+    
+    .card-header {
+        padding: 12px 16px;
+    }
+    
+    .card-body {
+        padding: 16px !important;
+    }
+    
+    /* List Items */
+    .list-group-item {
+        padding: 16px;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .list-group-item:last-child {
+        border-bottom: none;
+    }
+    
+    /* Buttons */
+    .btn {
+        padding: 10px 16px;
+        font-size: 14px;
+        min-height: 44px; /* Better touch target */
+    }
+    
+    .btn-sm {
+        padding: 6px 12px;
+        min-height: 36px;
+    }
+    
+    /* Badges */
+    .badge {
+        font-size: 0.75rem;
+        padding: 4px 8px;
+    }
+    
+    /* Timeline - Mobile Version */
+    .timeline-mobile {
+        padding-left: 0;
+    }
+    
+    .timeline-step {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 20px;
+        position: relative;
+    }
+    
+    .timeline-step:not(:last-child):after {
+        content: '';
+        position: absolute;
+        left: 20px;
+        top: 40px;
+        bottom: -20px;
+        width: 2px;
+        background-color: #e0e0e0;
+        z-index: 1;
+    }
+    
+    .timeline-step.completed:not(:last-child):after {
+        background-color: #28a745;
+    }
+    
+    .timeline-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        margin-right: 16px;
+        flex-shrink: 0;
+        position: relative;
+        z-index: 2;
+    }
+    
+    .timeline-step.active .timeline-icon {
+        animation: pulse 2s infinite;
+    }
+    
+    .timeline-content {
+        flex: 1;
+        padding-top: 4px;
+    }
+    
+    /* Responsive Tables Fallback */
+    .table-responsive {
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+    }
+    
+    .table {
+        margin-bottom: 0;
+    }
+    
+    .table th, .table td {
+        padding: 12px 8px;
+        font-size: 0.85rem;
+    }
+    
+    /* Touch-friendly spacing */
+    .d-grid.gap-2 {
+        gap: 12px !important;
+    }
+}
+
+/* Desktop Styles */
+@media (min-width: 768px) {
+    .nav-tabs .nav-link {
+        padding: 12px 20px;
+    }
+    
+    .timeline-mobile {
+        display: none;
+    }
+}
+
+/* Animation for active timeline */
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(255, 193, 7, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 193, 7, 0);
+    }
+}
+
+/* Ensure all cards have consistent shadow on mobile */
+@media (max-width: 768px) {
+    .card {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: none;
+    }
+}
+
+/* Improve visibility of active tab */
+.nav-tabs .nav-link.active {
+    border-bottom: 3px solid #0d6efd;
+    font-weight: 600;
+}
+
+/* Fix for small screens */
+@media (max-width: 360px) {
+    .nav-tabs .nav-link span {
+        display: none;
+    }
+    
+    .nav-tabs .nav-link {
+        padding: 10px 6px;
+    }
+    
+    .btn span {
+        display: none;
+    }
+    
+    .btn i {
+        margin: 0 !important;
+    }
+}
+</style>
 {% endblock %}

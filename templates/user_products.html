@@ -1,139 +1,438 @@
 <!-- templates/user_products.html -->
 {% extends "base.html" %}
-{% block title %}Products - Reservation{% endblock %}
+{% block title %}Products - Shop & Reserve{% endblock %}
 
 {% block content %}
-<h1 class="mb-4">🛍️ Our Products</h1>
+<style>
+    /* Shopee-like styling */
+    .product-card {
+        border: 1px solid #e5e5e5;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .product-card:hover {
+        border-color: #ee4d2d;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+    }
+    
+    .product-badge {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 10;
+        font-size: 12px;
+        padding: 4px 8px;
+        border-radius: 4px;
+    }
+    
+    .product-image {
+        height: 180px;
+        width: 100%;
+        object-fit: cover;
+        border-bottom: 1px solid #f5f5f5;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    }
+    
+    .sold-badge {
+        background-color: #ee4d2d;
+        color: white;
+        padding: 2px 6px;
+        border-radius: 10px;
+        font-size: 12px;
+        margin-left: 5px;
+    }
+    
+    .price {
+        color: #ee4d2d;
+        font-weight: bold;
+        font-size: 18px;
+    }
+    
+    .product-name {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        height: 48px;
+        line-height: 1.4;
+        margin-bottom: 8px;
+    }
+    
+    .quantity-selector {
+        width: 100px;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+        padding: 6px;
+        text-align: center;
+    }
+    
+    .cart-summary-card {
+        position: sticky;
+        top: 20px;
+        border: 2px solid #ee4d2d;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(238, 77, 45, 0.1);
+    }
+    
+    .top-seller-tag {
+        background: linear-gradient(90deg, #ff9500, #ff5e00);
+        color: white;
+        padding: 4px 12px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: bold;
+        display: inline-block;
+        margin-bottom: 8px;
+    }
+    
+    .rating-stars {
+        color: #ffc107;
+        font-size: 14px;
+    }
+    
+    .no-image-placeholder {
+        height: 180px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        border-bottom: 1px solid #f5f5f5;
+    }
+</style>
 
-<form method="POST" action="{{ url_for('add_to_cart') }}" id="orderForm">
-    <div class="table-responsive">
-        <table class="table table-hover">
-            <thead class="table-light">
-                <tr>
-                    <th width="5%">Rank</th>
-                    <th width="40%">Product Name</th>
-                    <th width="15%">Price (RM)</th>
-                    <th width="15%">Weight (kg)</th>
-                    <th width="10%">Sold</th>
-                    <th width="15%">Quantity</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for product in products %}
-                <tr>
-                    <td>
-                        {% if product.total_sold > 0 %}
-                            <span class="badge {% if product.rank == 1 %}bg-danger{% elif product.rank == 2 %}bg-warning text-dark{% elif product.rank == 3 %}bg-primary{% else %}bg-secondary{% endif %}">
-                                {{ product.rank }}
-                            </span>
-                        {% else %}
-                            <span class="text-muted">-</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <strong>{{ product.name }}</strong>
-                        {% if product.rank <= 3 and product.total_sold > 0 %}
-                            <span class="badge ms-2 {% if product.rank == 1 %}bg-danger{% elif product.rank == 2 %}bg-warning text-dark{% else %}bg-primary{% endif %}">
-                                {% if product.rank == 1 %}🔥 Top Seller{% elif product.rank == 2 %}🥈 Popular{% else %}⭐ Hot{% endif %}
-                            </span>
-                        {% endif %}
-                    </td>
-                    <td>RM{{ "%.2f"|format(product.price) }}</td>
-                    <td>{{ product.weight }}</td>
-                    <td>
-                        {% if product.total_sold > 0 %}
-                            <span class="badge bg-success">{{ product.total_sold }}</span>
-                        {% else %}
-                            <span class="badge bg-secondary">New</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <input type="number" 
-                               name="quantity_{{ product.id }}" 
-                               class="form-control form-control-sm quantity-input" 
-                               value="0" 
-                               min="0" 
-                               max="99"
-                               style="width: 80px;"
-                               data-product-id="{{ product.id }}"
-                               data-product-name="{{ product.name }}"
-                               data-price="{{ product.price }}">
-                        <small class="text-muted">Enter 0 to skip</small>
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="6" class="text-center">
-                        <div class="alert alert-info">
-                            No products available at the moment.
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    
-    <!-- Order Summary Card (Initially Hidden) -->
-    <div class="card mt-4" id="orderSummary" style="display: none;">
-        <div class="card-header bg-info text-white">
-            <h5 class="mb-0">📋 Selected Items Summary</h5>
-        </div>
-        <div class="card-body">
-            <div id="selectedItemsList"></div>
-            <div class="row mt-3">
-                <div class="col-md-6">
-                    <h6>Total Quantity: <span id="totalQty">0</span> items</h6>
-                </div>
-                <div class="col-md-6 text-end">
-                    <h6>Total Amount: RM<span id="totalAmount">0.00</span></h6>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Proceed to Checkout Button -->
-    <div class="card mt-4">
-        <div class="card-body">
+<div class="container-fluid py-4">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <h5 class="mb-0">🛒 Proceed to Checkout</h5>
-                    <small class="text-muted">Fill quantities and proceed to checkout</small>
+                    <h1 class="h2 mb-2">🛍️ Eunice Foodie</h1>
+                    <p class="text-muted mb-0">
+                        <i class="fas fa-star rating-stars"></i> Fresh Homemade Snacks
+                    </p>
                 </div>
-                <button type="submit" class="btn btn-primary btn-lg" id="proceedToCheckoutBtn" disabled>
-                    Proceed to Checkout →
-                </button>
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-danger me-2">
+                        <i class="fas fa-fire"></i> Top Sellers
+                    </span>
+                    <span class="badge bg-success">
+                        <i class="fas fa-bolt"></i> Fast Response
+                    </span>
+                </div>
             </div>
+            <hr class="my-3">
         </div>
     </div>
-</form>
 
-<div class="alert alert-info mt-4">
-    <h6>ℹ️ How to Order:</h6>
-    <ol class="mb-0">
-        <li>Enter quantity (1 or more) for products you want to order</li>
-        <li>Leave as 0 for products you don't want</li>
-        <li>Review the order summary that appears</li>
-        <li>Click "Proceed to Checkout →" button at the bottom</li>
-        <li>Enter your shipping details and confirm order</li>
-    </ol>
-    <hr>
-    <p class="mb-0">
-        <i class="fas fa-lightbulb"></i> <strong>Tip:</strong> Products are ranked by sales. Top sellers are marked with 
-        <span class="badge bg-danger">🔥 Top Seller</span> badges!
-    </p>
+    <form method="POST" action="{{ url_for('add_to_cart') }}" id="orderForm">
+        <div class="row">
+            <!-- Products Grid -->
+            <div class="col-lg-9">
+                <!-- Sorting/Filter Bar -->
+                <div class="card mb-4">
+                    <div class="card-body py-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="me-3">
+                                    <i class="fas fa-filter"></i> 
+                                    <strong>{{ products|length }}</strong> Products Available
+                                </span>
+                                <span class="text-muted">
+                                    <i class="fas fa-chart-line"></i> Ranked by Sales Performance
+                                </span>
+                            </div>
+                            <div>
+                                <span class="badge bg-danger me-1">🔥 Top Seller</span>
+                                <span class="badge bg-warning me-1">🥈 Popular</span>
+                                <span class="badge bg-primary">⭐ Hot Item</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Products Grid -->
+                <div class="row">
+                    {% for product in products %}
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="product-card h-100">
+                            <!-- Product Badges -->
+                            {% if product.rank <= 3 and product.total_sold > 0 %}
+                            <div class="product-badge 
+                                {% if product.rank == 1 %}bg-danger
+                                {% elif product.rank == 2 %}bg-warning
+                                {% else %}bg-primary{% endif %}">
+                                {% if product.rank == 1 %}🔥 TOP {{ product.rank }}
+                                {% elif product.rank == 2 %}🥈 NO {{ product.rank }}
+                                {% else %}⭐ NO {{ product.rank }}{% endif %}
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Product Image -->
+                            <div class="text-center">
+                                <div class="product-image w-100 rounded">
+                                    {% if product.image_url %}
+                                    <img src="{{ url_for('static', filename='product_images/' + product.image_url) }}" 
+                                         alt="{{ product.name }}" 
+                                         class="product-image w-100 h-100 object-fit-cover">
+                                    {% else %}
+                                    <div class="no-image-placeholder w-100 rounded">
+                                        <div class="text-center">
+                                            <div class="display-1 text-muted mb-2">
+                                                {% if "floss" in product.name.lower() %}🍞
+                                                {% elif "crab" in product.name.lower() %}🦀
+                                                {% elif "seaweed" in product.name.lower() %}🌿
+                                                {% elif "cracker" in product.name.lower() %}🍘
+                                                {% elif "vegie" in product.name.lower() %}🥬
+                                                {% elif "muruku" in product.name.lower() %}🥨
+                                                {% elif "roll" in product.name.lower() %}🍥
+                                                {% elif "spicy" in product.name.lower() %}🌶️
+                                                {% elif "peanut" in product.name.lower() %}🥜
+                                                {% elif "choco" in product.name.lower() %}🍫
+                                                {% elif "pineapple" in product.name.lower() %}🍍
+                                                {% elif "soy" in product.name.lower() %}🥠
+                                                {% else %}🥮{% endif %}
+                                            </div>
+                                            <small class="text-muted">No image available</small>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <!-- Product Info -->
+                            <div class="p-3">
+                                <!-- Product Name -->
+                                <h5 class="product-name" title="{{ product.name }}">
+                                    {{ product.name }}
+                                </h5>
+                                
+                                <!-- Sales & Rating -->
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div>
+                                        <span class="rating-stars">
+                                            <i class="fas fa-star"></i>
+                                            <i class="fas fa-star"></i>
+                                            <i class="fas fa-star"></i>
+                                            <i class="fas fa-star"></i>
+                                            <i class="fas fa-star-half-alt"></i>
+                                        </span>
+                                        <span class="text-muted ms-1">4.9</span>
+                                    </div>
+                                    <div>
+                                        {% if product.total_sold > 0 %}
+                                        <span class="sold-badge">
+                                            {{ product.total_sold }} sold
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">New</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <!-- Price -->
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div>
+                                        <span class="price">RM{{ "%.2f"|format(product.price) }}</span>
+                                        <small class="text-muted d-block">
+                                            {{ product.weight }} kg
+                                        </small>
+                                    </div>
+                                </div>
+                                
+                                <!-- Quantity Selector -->
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <small class="text-muted">Quantity:</small>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <input type="number" 
+                                               name="quantity_{{ product.id }}" 
+                                               class="form-control quantity-selector" 
+                                               value="0" 
+                                               min="0" 
+                                               max="99"
+                                               data-product-id="{{ product.id }}"
+                                               data-product-name="{{ product.name }}"
+                                               data-price="{{ product.price }}"
+                                               style="width: 80px;">
+                                    </div>
+                                </div>
+                                
+                                <!-- Quick Actions -->
+                                <div class="mt-3">
+                                    <button type="button" class="btn btn-outline-primary btn-sm w-100 quick-add" 
+                                            data-product-id="{{ product.id }}">
+                                        <i class="fas fa-cart-plus"></i> Quick Add 1
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="col-12">
+                        <div class="alert alert-info text-center">
+                            <h5>No products available at the moment.</h5>
+                            <p class="mb-0">Please check back later!</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Order Instructions -->
+                <div class="alert alert-light border mt-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-1 text-center">
+                            <div class="display-6">📦</div>
+                        </div>
+                        <div class="col-md-11">
+                            <h6><i class="fas fa-info-circle text-primary"></i> How to Order:</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <ol class="mb-2">
+                                        <li>Enter quantity for desired products</li>
+                                        <li>Use <strong>Quick Add</strong> for single items</li>
+                                        <li>Review cart summary on the right</li>
+                                    </ol>
+                                </div>
+                                <div class="col-md-6">
+                                    <ol start="4">
+                                        <li>Ensure total quantity > 0</li>
+                                        <li>Click <strong>Proceed to Checkout</strong></li>
+                                        <li>Complete shipping details</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Cart Summary Sidebar -->
+            <div class="col-lg-3">
+                <div class="cart-summary-card">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-shopping-cart"></i> Your Cart
+                            <span class="badge bg-white text-danger float-end" id="cartItemCount">0 items</span>
+                        </h5>
+                    </div>
+                    
+                    <div class="card-body">
+                        <!-- Selected Items List -->
+                        <div id="selectedItemsList" class="mb-3">
+                            <div class="text-center text-muted py-4">
+                                <div class="display-4 mb-2">🛒</div>
+                                <p class="mb-0">Your cart is empty</p>
+                                <small>Select items to continue</small>
+                            </div>
+                        </div>
+                        
+                        <!-- Order Summary -->
+                        <div class="border-top pt-3">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">Subtotal:</span>
+                                <strong id="subtotalAmount">RM0.00</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">Items:</span>
+                                <strong id="summaryTotalQty">0 items</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-3">
+                                <span class="text-muted">Estimated Shipping:</span>
+                                <strong class="text-info">Calculated at checkout</strong>
+                            </div>
+                            
+                            <hr>
+                            
+                            <!-- Estimated Total -->
+                            <div class="d-flex justify-content-between mb-3">
+                                <span class="h6">Estimated Total:</span>
+                                <span class="h5 text-danger" id="summaryTotalAmount">RM0.00</span>
+                            </div>
+                            
+                            <!-- Checkout Button -->
+                            <button type="submit" class="btn btn-danger btn-lg w-100 py-3" 
+                                    id="proceedToCheckoutBtn" disabled>
+                                <i class="fas fa-lock"></i> Proceed to Checkout
+                            </button>
+                            
+                            <!-- Payment Methods -->
+                            <div class="text-center mt-3">
+                                <small class="text-muted">We accept:</small>
+                                <div class="mt-1">
+                                    <span class="badge bg-light text-dark me-1">
+                                        <i class="fas fa-university"></i> Bank Transfer
+                                    </span>
+                                    <span class="badge bg-light text-dark">
+                                        <i class="fas fa-mobile-alt"></i> Touch 'n Go
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Cart Tips -->
+                    <div class="card-footer bg-light">
+                        <small class="text-muted">
+                            <i class="fas fa-lightbulb"></i> 
+                            <strong>Tip:</strong> Top sellers are marked with 
+                            <span class="badge bg-danger">🔥</span> badges for best sellers!
+                        </small>
+                    </div>
+                </div>
+                
+                <!-- Order Information -->
+                <div class="card mt-4">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">
+                            <i class="fas fa-info-circle"></i> Order Information
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled mb-0">
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success"></i>
+                                <small>Fresh homemade snacks</small>
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success"></i>
+                                <small>Nationwide delivery</small>
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success"></i>
+                                <small>West: RM7 • East: RM15</small>
+                            </li>
+                            <li>
+                                <i class="fas fa-clock text-info"></i>
+                                <small>Processing: 1-2 business days</small>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const quantityInputs = document.querySelectorAll('.quantity-input');
-    const orderSummary = document.getElementById('orderSummary');
+    const quantityInputs = document.querySelectorAll('.quantity-selector');
     const selectedItemsList = document.getElementById('selectedItemsList');
-    const totalQty = document.getElementById('totalQty');
-    const totalAmount = document.getElementById('totalAmount');
+    const cartItemCount = document.getElementById('cartItemCount');
+    const subtotalAmount = document.getElementById('subtotalAmount');
+    const summaryTotalQty = document.getElementById('summaryTotalQty');
+    const summaryTotalAmount = document.getElementById('summaryTotalAmount');
     const proceedToCheckoutBtn = document.getElementById('proceedToCheckoutBtn');
     
-    function updateOrderSummary() {
+    // Quick add buttons
+    const quickAddButtons = document.querySelectorAll('.quick-add');
+    
+    function updateCartSummary() {
         let items = [];
         let totalQuantity = 0;
         let totalPrice = 0;
@@ -159,57 +458,128 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Update summary display
+        // Update cart summary display
         if (items.length > 0) {
-            let html = '<div class="table-responsive"><table class="table table-sm">';
-            html += '<thead><tr><th>Product</th><th class="text-center">Qty</th><th class="text-end">Price</th><th class="text-end">Total</th></tr></thead>';
+            // Update item count badge
+            cartItemCount.textContent = `${totalQuantity} item${totalQuantity > 1 ? 's' : ''}`;
+            cartItemCount.classList.remove('bg-white', 'text-danger');
+            cartItemCount.classList.add('bg-warning', 'text-dark');
+            
+            // Update selected items list
+            let html = '<div class="table-responsive"><table class="table table-sm mb-0">';
+            html += '<thead class="table-light"><tr><th>Product</th><th class="text-end">Qty</th><th class="text-end">Total</th></tr></thead>';
             html += '<tbody>';
             
             // Sort items by quantity (highest first)
             items.sort((a, b) => b.quantity - a.quantity);
             
-            items.forEach(item => {
-                html += `<tr>
-                    <td>${item.name}</td>
-                    <td class="text-center">${item.quantity}</td>
-                    <td class="text-end">RM${item.price.toFixed(2)}</td>
-                    <td class="text-end">RM${item.total.toFixed(2)}</td>
-                </tr>`;
+            items.forEach((item, index) => {
+                if (index < 5) { // Show first 5 items
+                    html += `<tr>
+                        <td><small>${item.name.substring(0, 20)}${item.name.length > 20 ? '...' : ''}</small></td>
+                        <td class="text-end">${item.quantity}</td>
+                        <td class="text-end"><strong>RM${item.total.toFixed(2)}</strong></td>
+                    </tr>`;
+                }
             });
+            
+            if (items.length > 5) {
+                html += `<tr><td colspan="3" class="text-center text-muted">
+                    <small>+ ${items.length - 5} more items</small>
+                </td></tr>`;
+            }
             
             html += '</tbody></table></div>';
             selectedItemsList.innerHTML = html;
-            orderSummary.style.display = 'block';
-            totalQty.textContent = totalQuantity;
-            totalAmount.textContent = totalPrice.toFixed(2);
+            
+            // Update totals
+            subtotalAmount.textContent = `RM${totalPrice.toFixed(2)}`;
+            summaryTotalQty.textContent = `${totalQuantity} item${totalQuantity > 1 ? 's' : ''}`;
+            summaryTotalAmount.textContent = `RM${totalPrice.toFixed(2)}`;
+            
+            // Enable checkout button
             proceedToCheckoutBtn.disabled = false;
-            proceedToCheckoutBtn.innerHTML = `Proceed to Checkout (${totalQuantity} items) →`;
+            proceedToCheckoutBtn.innerHTML = `<i class="fas fa-lock"></i> Proceed to Checkout (${totalQuantity} items)`;
         } else {
-            orderSummary.style.display = 'none';
+            // Empty cart state
+            cartItemCount.textContent = '0 items';
+            cartItemCount.classList.remove('bg-warning', 'text-dark');
+            cartItemCount.classList.add('bg-white', 'text-danger');
+            
+            selectedItemsList.innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <div class="display-4 mb-2">🛒</div>
+                    <p class="mb-0">Your cart is empty</p>
+                    <small>Select items to continue</small>
+                </div>
+            `;
+            
+            subtotalAmount.textContent = 'RM0.00';
+            summaryTotalQty.textContent = '0 items';
+            summaryTotalAmount.textContent = 'RM0.00';
             proceedToCheckoutBtn.disabled = true;
-            proceedToCheckoutBtn.innerHTML = 'Proceed to Checkout →';
+            proceedToCheckoutBtn.innerHTML = '<i class="fas fa-lock"></i> Proceed to Checkout';
         }
     }
     
-    // Add event listeners to all quantity inputs
-    quantityInputs.forEach(input => {
-        input.addEventListener('change', updateOrderSummary);
-        input.addEventListener('input', updateOrderSummary);
+    // Quick add functionality
+    quickAddButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const productId = this.dataset.productId;
+            const input = document.querySelector(`input[name="quantity_${productId}"]`);
+            const currentValue = parseInt(input.value) || 0;
+            input.value = currentValue + 1;
+            
+            // Trigger change event
+            input.dispatchEvent(new Event('change'));
+            
+            // Visual feedback
+            this.innerHTML = '<i class="fas fa-check"></i> Added!';
+            this.classList.remove('btn-outline-primary');
+            this.classList.add('btn-success');
+            
+            setTimeout(() => {
+                this.innerHTML = '<i class="fas fa-cart-plus"></i> Quick Add 1';
+                this.classList.remove('btn-success');
+                this.classList.add('btn-outline-primary');
+            }, 1000);
+        });
     });
     
-    // Form validation to prevent empty submission
+    // Add event listeners to all quantity inputs
+    quantityInputs.forEach(input => {
+        input.addEventListener('change', updateCartSummary);
+        input.addEventListener('input', updateCartSummary);
+    });
+    
+    // Form validation
     document.getElementById('orderForm').addEventListener('submit', function(e) {
-        const totalQuantity = parseInt(totalQty.textContent) || 0;
+        const totalQuantity = parseInt(summaryTotalQty.textContent) || 0;
         if (totalQuantity === 0) {
             e.preventDefault();
-            alert('Please select at least one item to proceed to checkout.');
+            // Show alert in Shopee style
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-warning alert-dismissible fade show position-fixed';
+            alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999;';
+            alertDiv.innerHTML = `
+                <strong><i class="fas fa-exclamation-triangle"></i> Cart Empty!</strong>
+                Please select at least one item to proceed.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(alertDiv);
+            
+            // Auto remove after 3 seconds
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 3000);
+            
             return false;
         }
         return true;
     });
     
     // Initial update
-    updateOrderSummary();
+    updateCartSummary();
 });
 </script>
 {% endblock %}

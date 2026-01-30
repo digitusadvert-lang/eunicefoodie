@@ -1,0 +1,115 @@
+<!-- templates/reservation_report_debug.html -->
+{% extends "admin_base.html" %}
+{% block title %}Reservation Report Debug{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <h1 class="mb-4">Reservation Report - Debug View</h1>
+    
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Status Values Found</h5>
+                </div>
+                <div class="card-body">
+                    <h6>Order Status Values:</h6>
+                    <ul>
+                        {% for status in status_values %}
+                        <li>{{ status }}</li>
+                        {% endfor %}
+                    </ul>
+                    
+                    <h6>Payment Status Values:</h6>
+                    <ul>
+                        {% for status in payment_status_values %}
+                        <li>{{ status }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">Database Info</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Total Orders:</strong> {{ all_orders|length }}</p>
+                    <p><strong>Total Order Items:</strong> {{ all_items|length }}</p>
+                    <p><strong>Total Products:</strong> {{ all_products|length }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">All Orders ({{ all_orders|length }})</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Customer</th>
+                            <th>Status</th>
+                            <th>Payment Status</th>
+                            <th>Total</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in all_orders %}
+                        <tr class="{% if order.status == 'reserved' and order.payment_status == 'verified' %}table-success{% endif %}">
+                            <td>{{ order.order_id }}</td>
+                            <td>{{ order.customer_name }}</td>
+                            <td><span class="badge bg-{% if order.status == 'reserved' %}warning{% elif order.status == 'verified' %}success{% else %}secondary{% endif %}">
+                                {{ order.status }}
+                            </span></td>
+                            <td><span class="badge bg-{% if order.payment_status == 'verified' %}success{% elif order.payment_status == 'pending_verification' %}warning{% else %}secondary{% endif %}">
+                                {{ order.payment_status }}
+                            </span></td>
+                            <td>RM{{ "%.2f"|format(order.total_price) }}</td>
+                            <td>{{ order.created_at[:10] if order.created_at }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header bg-secondary text-white">
+            <h5 class="mb-0">Testing Queries</h5>
+        </div>
+        <div class="card-body">
+            <h6>Try these manual queries:</h6>
+            <div class="mb-3">
+                <code>SELECT * FROM orders WHERE status = 'reserved' AND payment_status = 'verified'</code>
+                <br>
+                <small class="text-muted">This is what the report uses</small>
+            </div>
+            
+            <div class="mb-3">
+                <code>SELECT * FROM orders WHERE status LIKE '%reserv%'</code>
+                <br>
+                <small class="text-muted">Finds orders with "reserv" in status</small>
+            </div>
+            
+            <div class="mb-3">
+                <code>SELECT * FROM orders WHERE payment_status LIKE '%verify%'</code>
+                <br>
+                <small class="text-muted">Finds orders with "verify" in payment status</small>
+            </div>
+            
+            <a href="{{ url_for('reservation_report') }}" class="btn btn-primary">
+                <i class="fas fa-arrow-left"></i> Back to Report
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
