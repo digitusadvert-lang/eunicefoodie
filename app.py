@@ -1145,6 +1145,7 @@ def add_tracking_number(order_id):
     g.conn.commit()
     
     # Send Telegram notification
+        
     message = f"🚚 *ORDER SHIPPED*\n\n"
     message += f"📦 Order ID: {order_id}\n"
     message += f"👤 Customer: {order['customer_name']}\n"
