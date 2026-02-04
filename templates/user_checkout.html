@@ -58,7 +58,7 @@
                 <div class="alert alert-danger">{{ error }}</div>
                 {% endif %}
                 
-                <form method="POST">
+                <form method="POST" id="checkoutForm">
                     <!-- Personal Information -->
                     <div class="card mb-4 border-0 bg-light">
                         <div class="card-body">
@@ -119,6 +119,59 @@
                         </div>
                     </div>
                     
+                    <!-- Terms and Conditions -->
+                    <div class="card mb-4 border-0 bg-light">
+                        <div class="card-body">
+                            <h6 class="card-title mb-3">📝 Terms & Conditions / 条款与条件</h6>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="terms_agree" name="terms_agree" required>
+                                <label class="form-check-label" for="terms_agree">
+                                    <strong>I agree to the Terms and Conditions * / 我同意条款与条件 *</strong>
+                                </label>
+                            </div>
+                            
+                            <div class="card border">
+                                <div class="card-body p-3">
+                                    <p class="mb-2"><strong>Important Delivery Notice / 重要送货通知:</strong></p>
+                                    
+                                    <!-- English Version -->
+                                    <div class="mb-3">
+                                        <p class="mb-2"><strong>English:</strong></p>
+                                        <p class="mb-2 text-muted small">
+                                            Due to the nature of the delivery process, we, as the seller, will not be responsible for any damages that may occur to the cookies during transit. By agreeing to these terms, you acknowledge and accept that:
+                                        </p>
+                                        <ol class="mb-0 text-muted small">
+                                            <li>Cookies are fragile items that may be subject to damage during delivery</li>
+                                            <li>We will package items with care, but cannot guarantee perfect condition upon arrival</li>
+                                            <li>You agree not to file complaints or request refunds for damages caused during delivery</li>
+                                            <li>Shipping carriers are responsible for handling, and we cannot control their processes</li>
+                                        </ol>
+                                        <p class="mt-2 mb-0 text-muted small">
+                                            <strong>Note:</strong> If you are concerned about potential delivery damage, please reconsider your purchase.
+                                        </p>
+                                    </div>
+                                    
+                                    <!-- Chinese Version -->
+                                    <div class="border-top pt-3">
+                                        <p class="mb-2"><strong>中文版本:</strong></p>
+                                        <p class="mb-2 text-muted small">
+                                            由于送货过程的性质，我们作为卖家，将不承担饼干在运输过程中可能发生的任何损坏责任。同意这些条款，即表示您承认并接受：
+                                        </p>
+                                        <ol class="mb-0 text-muted small">
+                                            <li>饼干是易碎物品，可能在送货过程中受损</li>
+                                            <li>我们会小心包装物品，但不能保证到达时完美无缺</li>
+                                            <li>您同意不对送货过程中造成的损坏提出投诉或要求退款</li>
+                                            <li>运输公司负责处理，我们无法控制他们的流程</li>
+                                        </ol>
+                                        <p class="mt-2 mb-0 text-muted small">
+                                            <strong>注意：</strong>如果您担心潜在的送货损坏，请重新考虑您的购买。
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <!-- Important Note -->
                     <div class="alert alert-warning">
                         <h6><i class="fas fa-info-circle"></i> Reservation Process</h6>
@@ -131,7 +184,7 @@
                         <a href="{{ url_for('user_products') }}" class="btn btn-secondary">
                             ← Back to Products
                         </a>
-                        <button type="submit" class="btn btn-success btn-lg">
+                        <button type="submit" class="btn btn-success btn-lg" id="submitBtn" disabled>
                             Reserve Order Now →
                         </button>
                     </div>
@@ -219,6 +272,7 @@
             <div class="card-body">
                 <ol class="mb-0 small">
                     <li>Complete this form with your details</li>
+                    <li>Agree to Terms & Conditions</li>
                     <li>Click "Reserve Order Now"</li>
                     <li>You'll see reservation confirmation</li>
                     <li>Admin contacts you within 24 hours</li>
@@ -255,6 +309,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const shippingInfo = document.getElementById('shippingInfo');
     const shippingFee = document.getElementById('shippingFee');
     const totalPrice = document.getElementById('totalPrice');
+    const termsCheckbox = document.getElementById('terms_agree');
+    const submitBtn = document.getElementById('submitBtn');
     const subtotal = {{ subtotal }};
     
     // Define state regions
@@ -306,6 +362,18 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
+    // Enable/disable submit button based on terms agreement
+    function updateSubmitButton() {
+        submitBtn.disabled = !termsCheckbox.checked;
+        if (termsCheckbox.checked) {
+            submitBtn.classList.remove('btn-secondary');
+            submitBtn.classList.add('btn-success');
+        } else {
+            submitBtn.classList.remove('btn-success');
+            submitBtn.classList.add('btn-secondary');
+        }
+    }
+    
     // Form validation
     function setupFormValidation() {
         // Contact number validation
@@ -341,6 +409,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         });
+        
+        // Terms checkbox event listener
+        termsCheckbox.addEventListener('change', updateSubmitButton);
     }
     
     // Progress indicator update
@@ -382,6 +453,7 @@ document.addEventListener('DOMContentLoaded', function() {
     updateShippingDisplay();
     setupFormValidation();
     updateProgressIndicator();
+    updateSubmitButton();
     
     // Form validation before submit
     document.querySelector('form').addEventListener('submit', function(e) {
@@ -413,9 +485,17 @@ document.addEventListener('DOMContentLoaded', function() {
             isValid = false;
         }
         
+        // Check terms agreement
+        if (!termsCheckbox.checked) {
+            termsCheckbox.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            termsCheckbox.classList.remove('is-invalid');
+        }
+        
         if (!isValid) {
             e.preventDefault();
-            alert('Please fill in all required fields correctly.');
+            alert('Please fill in all required fields correctly and agree to the Terms & Conditions.\n\n请正确填写所有必填字段并同意条款与条件。');
         }
     });
 });
@@ -438,6 +518,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
 .card.bg-light {
     background-color: #f8f9fa !important;
+}
+
+#submitBtn:disabled {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    cursor: not-allowed;
+}
+
+.form-check-input.is-invalid {
+    border-color: #dc3545;
 }
 
 @media (max-width: 768px) {
